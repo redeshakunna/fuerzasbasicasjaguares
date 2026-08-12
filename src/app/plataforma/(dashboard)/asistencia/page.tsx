@@ -14,6 +14,7 @@ import { getStaffNameById } from "@/lib/data/staff";
 import { getActivitiesForCategory, groupActivities } from "@/lib/data/activities";
 import { resolveAttendanceClosure } from "@/lib/data/attendance-closures";
 import { getRsvpStatusForMatch } from "@/lib/data/match-rsvp";
+import { getCallupsForMatch } from "@/lib/data/match-callups";
 import { parseCategory } from "@/lib/data/categories";
 
 export const dynamic = "force-dynamic";
@@ -107,13 +108,19 @@ export default async function AsistenciaPage({ searchParams }: AsistenciaPagePro
       );
     }
 
-    const [players, attendanceMap, history, closure, rsvpByPlayerMap] = await Promise.all([
+    const [roster, callups, attendanceMap, history, closure, rsvpByPlayerMap] = await Promise.all([
       getPlayers(category),
+      getCallupsForMatch(match.id),
       getAttendanceForMatch(match.id),
       getAttendanceHistory(category),
       resolveAttendanceClosure("partido", match.id, match.match_date, match.match_time),
       getRsvpStatusForMatch(match.id),
     ]);
+
+    // La asistencia de un partido es solo de los convocados guardados, no de toda la
+    // categoría — si todavía no se guardó la convocatoria, no hay a quién marcar.
+    const convocadoIds = new Set(callups.filter((c) => c.call_status === "Confirmado").map((c) => c.player_id));
+    const players = roster.filter((p) => convocadoIds.has(p.id));
 
     const todayISO = new Date().toISOString().slice(0, 10);
     const canClose = match.match_date <= todayISO;
@@ -132,6 +139,40 @@ export default async function AsistenciaPage({ searchParams }: AsistenciaPagePro
             pending: rsvpEntries.filter((r) => r.response === null).length,
           }
         : undefined;
+
+    if (players.length === 0) {
+      return (
+        <div className="space-y-6">
+          {header}
+          <ActivityInfoCard
+            icon={Trophy}
+            iconTone="gold"
+            title={match.is_home ? `Jaguares vs. ${match.opponent}` : `${match.opponent} vs. Jaguares`}
+            dateLabel={formatFullDate(match.match_date)}
+            timeLabel={formatTime(match.match_time)}
+            category={category}
+            meta={meta}
+            viewHref={`/plataforma/partidos/${match.id}`}
+            viewLabel="Ver partido y convocatoria"
+          />
+          <Card className="flex flex-col items-center gap-3 p-14 text-center">
+            <ClipboardCheck className="h-8 w-8 text-jaguar-ink/25" strokeWidth={1.6} aria-hidden />
+            <p className="text-[14px] lg:text-[15.5px] font-semibold text-jaguar-ink/60">
+              Todavía no hay convocatoria guardada para este partido.
+            </p>
+            <p className="max-w-sm text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">
+              La asistencia se marca sobre los convocados — arma la convocatoria primero y después vuelve acá.
+            </p>
+            <Link
+              href={`/plataforma/partidos/${match.id}`}
+              className="rounded-xl bg-jaguar-green-600 px-4 py-2 text-[13px] lg:text-[14px] font-semibold text-white hover:bg-jaguar-green-700"
+            >
+              Armar convocatoria
+            </Link>
+          </Card>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-6">

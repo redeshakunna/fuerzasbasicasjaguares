@@ -205,26 +205,16 @@ export async function buildCallupWhatsAppMessage(matchId: string): Promise<Callu
     { onConflict: "match_id,player_id", ignoreDuplicates: true },
   );
   if (upsertError) {
-    console.error("buildCallupWhatsAppMessage() falló creando tokens rsvp:", upsertError);
+    console.error("buildCallupWhatsAppMessage() falló creando entradas rsvp:", upsertError);
   }
 
-  const { data: rsvpRows, error: rsvpError } = await supabase
-    .from("match_rsvp")
-    .select("player_id, token")
-    .eq("match_id", matchId)
-    .in("player_id", playerIds);
-  if (rsvpError) {
-    console.error("buildCallupWhatsAppMessage() falló leyendo tokens rsvp:", rsvpError);
-  }
-
+  // Un solo link para toda la convocatoria — el jugador elige su nombre ahí en vez de
+  // recibir un link personal (más fácil de compartir un solo link que veinte).
   const siteUrl = await getSiteUrl();
-  const rsvpLinks: Record<string, string> = {};
-  for (const row of rsvpRows ?? []) {
-    rsvpLinks[row.player_id] = `${siteUrl}/confirmar/${row.token}`;
-  }
+  const rsvpLink = `${siteUrl}/confirmar/partido/${matchId}`;
 
   const confirmedPlayers = sortRosterForCallup(players ?? []);
-  const message = buildMatchCallupMessage({ match, confirmedPlayers, rsvpLinks });
+  const message = buildMatchCallupMessage({ match, confirmedPlayers, rsvpLink });
   return { message };
 }
 

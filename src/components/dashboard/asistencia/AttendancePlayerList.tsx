@@ -98,7 +98,16 @@ export function AttendancePlayerList({
                 } ${!status || status === "Presente" ? "hover:bg-jaguar-mist/30" : ""}`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Link href={`/plataforma/jugadores/${player.id}`} className="shrink-0">
+                  <Link
+                    href={`/plataforma/jugadores/${player.id}`}
+                    className={`shrink-0 rounded-full ${
+                      rsvp?.response === "Confirmado"
+                        ? "ring-2 ring-jaguar-green-500 ring-offset-2 ring-offset-white"
+                        : rsvp?.response === "No asiste"
+                          ? "ring-2 ring-jaguar-maroon-400 ring-offset-2 ring-offset-white"
+                          : ""
+                    }`}
+                  >
                     <Avatar initials={fullName.slice(0, 2).toUpperCase()} photoUrl={player.photo_url} size={34} />
                   </Link>
                   <Link href={`/plataforma/jugadores/${player.id}`} className="group min-w-0 flex-1">

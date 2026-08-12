@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronDown, ClipboardCheck, Loader2, MessageCircle, MoreVertical, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ClipboardCheck, Loader2, MessageCircle, MoreVertical, XCircle } from "lucide-react";
 import { Avatar } from "../ui/Avatar";
 import { Card, CardHeader } from "../ui/Card";
 import { StarRating } from "../ui/StarRating";
@@ -92,6 +92,14 @@ export function CallupList({
   const confirmedCount = sortedRoster.filter((p) => rows[p.id]?.confirmed).length;
   const atMax = confirmedCount >= MAX_SQUAD;
   const confirmedPlayers = sortedRoster.filter((p) => rows[p.id]?.confirmed);
+
+  // Convocados que avisaron por WhatsApp que no pueden ir — siguen contando como
+  // convocados (queda el registro de que fueron llamados, útil para futuros informes),
+  // pero no van a estar realmente en la cancha, así que avisamos si hace falta reforzar.
+  const rsvpAbsences = sortedRoster.filter(
+    (p) => rows[p.id]?.confirmed && rsvpByPlayer?.[p.id]?.response === "No asiste",
+  ).length;
+  const missingForTarget = Math.max(0, TARGET_SQUAD - (confirmedCount - rsvpAbsences));
 
   const groups = useMemo(() => {
     const map = new Map<PlayerRow["position_group"], PlayerRow[]>();
@@ -194,8 +202,20 @@ export function CallupList({
       ) : null}
 
       <p className="mt-3 px-6 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/40">
-        &ldquo;Convocatoria WhatsApp&rdquo; incluye, junto a cada convocado, su link personal para confirmar asistencia.
+        &ldquo;Convocatoria WhatsApp&rdquo; incluye un link de confirmación — cada convocado toca su nombre y confirma.
       </p>
+
+      {rsvpAbsences > 0 ? (
+        <div className="mx-6 mt-3 flex items-start gap-2.5 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-jaguar-maroon-600" strokeWidth={2} aria-hidden />
+          <p className="text-[12.5px] lg:text-[13.5px] font-medium text-jaguar-maroon-700">
+            {rsvpAbsences} convocado{rsvpAbsences > 1 ? "s" : ""} avisó por WhatsApp que no puede ir (sigue{rsvpAbsences > 1 ? "n" : ""} en la lista, solo atenuado{rsvpAbsences > 1 ? "s" : ""}).{" "}
+            {missingForTarget > 0
+              ? `Te faltan ${missingForTarget} para completar los ${TARGET_SQUAD} en la cancha — considera convocar a alguien del banco.`
+              : "El resto del plantel cubre el cupo igual."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-4 flex items-center justify-between px-6">
         <p className="text-[13.5px] lg:text-[15px] font-bold text-jaguar-ink">
@@ -210,7 +230,7 @@ export function CallupList({
       </div>
 
       <div className="mt-4">
-        <CallupPitchPreview players={confirmedPlayers} />
+        <CallupPitchPreview players={confirmedPlayers} rsvpByPlayer={rsvpByPlayer} />
       </div>
 
       {error ? (
@@ -234,11 +254,14 @@ export function CallupList({
                 const row = rows[player.id] as RowState;
                 const isExpanded = expanded === player.id;
                 const isSpecial = row.availability !== "Disponible";
-                const disableCheckbox = isSpecial || (!row.confirmed && atMax);
                 const rsvp = rsvpByPlayer?.[player.id];
+                // Avisó que no va pero sigue contando como convocado — se deja marcado a
+                // propósito (registro histórico para futuros informes), solo se atenúa.
+                const rsvpDeclinedButCounted = row.confirmed && rsvp?.response === "No asiste";
+                const disableCheckbox = isSpecial || (!row.confirmed && atMax) || rsvpDeclinedButCounted;
 
                 return (
-                  <div key={player.id} className="py-3">
+                  <div key={player.id} className={`py-3 ${rsvpDeclinedButCounted ? "opacity-55" : ""}`}>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -246,11 +269,14 @@ export function CallupList({
                         aria-checked={row.confirmed}
                         disabled={disableCheckbox}
                         onClick={() => toggleConfirmed(player.id)}
+                        title={rsvpDeclinedButCounted ? "Avisó que no va — sigue convocado, pero no se cuenta con él en la cancha" : undefined}
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
                           row.confirmed
-                            ? "border-jaguar-green-600 bg-jaguar-green-600 text-white"
+                            ? rsvpDeclinedButCounted
+                              ? "border-jaguar-maroon-400 bg-jaguar-maroon-400 text-white"
+                              : "border-jaguar-green-600 bg-jaguar-green-600 text-white"
                             : "border-jaguar-ink/15 bg-white text-transparent"
-                        } ${disableCheckbox ? "opacity-35" : "hover:border-jaguar-green-500"}`}
+                        } ${disableCheckbox ? "opacity-70" : "hover:border-jaguar-green-500"}`}
                       >
                         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
                           <path d="M3 8.5 6.2 12 13 4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
@@ -266,7 +292,13 @@ export function CallupList({
                         className="group min-w-0 flex-1"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <p className="truncate text-[13.5px] lg:text-[15px] font-semibold text-jaguar-ink group-hover:underline">{fullName}</p>
+                        <p
+                          className={`truncate text-[13.5px] lg:text-[15px] font-semibold group-hover:underline ${
+                            rsvpDeclinedButCounted ? "text-jaguar-ink/50 line-through" : "text-jaguar-ink"
+                          }`}
+                        >
+                          {fullName}
+                        </p>
                         <div className="mt-0.5 flex items-center gap-1.5">
                           <p className="text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
                             {player.jersey_number ? `#${player.jersey_number} · ` : ""}
@@ -295,7 +327,14 @@ export function CallupList({
                       ) : null}
 
                       {isSpecial ? (
-                        <span className="rounded-full bg-jaguar-maroon-500/10 px-2.5 py-1 text-[10.5px] lg:text-[11.5px] font-bold uppercase tracking-[0.02em] text-jaguar-maroon-600">
+                        <span
+                          title={
+                            rsvp?.response === "No asiste" && row.availability === "No asistirá"
+                              ? `Avisó por WhatsApp que no puede ir${rsvp.reason ? `: ${rsvp.reason}` : ""}`
+                              : undefined
+                          }
+                          className="rounded-full bg-jaguar-maroon-500/10 px-2.5 py-1 text-[10.5px] lg:text-[11.5px] font-bold uppercase tracking-[0.02em] text-jaguar-maroon-600"
+                        >
                           {row.availability}
                         </span>
                       ) : null}

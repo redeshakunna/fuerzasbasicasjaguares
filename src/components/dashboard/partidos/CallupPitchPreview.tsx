@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { callupPositionLabel, getFullName } from "@/lib/data/players-stats";
 import type { PlayerRow } from "@/lib/data/players";
+import type { RsvpStatus } from "@/lib/data/match-rsvp";
 
 const bandOrder: PlayerRow["position_group"][] = ["Arquero", "Defensa", "Volante", "Extremo", "Delantero"];
 
@@ -30,7 +31,13 @@ const bandChip: Record<PlayerRow["position_group"], string> = {
  * línea de posición. A medida que el técnico confirma jugadores, aparecen aquí
  * con dorsal y apodo, sin límite de cupo.
  */
-export function CallupPitchPreview({ players }: { players: PlayerRow[] }) {
+export function CallupPitchPreview({
+  players,
+  rsvpByPlayer,
+}: {
+  players: PlayerRow[];
+  rsvpByPlayer?: Record<string, RsvpStatus>;
+}) {
   const bands = bandOrder
     .map((group) => ({ group, groupPlayers: players.filter((p) => p.position_group === group) }))
     .filter(({ groupPlayers }) => groupPlayers.length > 0);
@@ -54,22 +61,29 @@ export function CallupPitchPreview({ players }: { players: PlayerRow[] }) {
                   <AnimatePresence>
                     {groupPlayers.map((player) => {
                       const fullName = getFullName(player);
+                      const declined = rsvpByPlayer?.[player.id]?.response === "No asiste";
                       return (
                         <motion.div
                           key={player.id}
                           initial={{ opacity: 0, scale: 0.6, y: 6 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          animate={{ opacity: declined ? 0.55 : 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.6 }}
                           transition={{ type: "spring", stiffness: 420, damping: 28 }}
                           className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3 shadow-sm ring-1 ring-jaguar-ink/6"
-                          title={fullName}
+                          title={declined ? `${fullName} — avisó que no va` : fullName}
                         >
                           <span
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] lg:text-[12px] font-black leading-none text-white ${bandChip[group]}`}
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] lg:text-[12px] font-black leading-none text-white ${
+                              declined ? "bg-jaguar-ink/25" : bandChip[group]
+                            }`}
                           >
                             {player.jersey_number ?? "—"}
                           </span>
-                          <span className="max-w-[110px] truncate text-[12px] lg:text-[13px] font-semibold text-jaguar-ink">
+                          <span
+                            className={`max-w-[110px] truncate text-[12px] lg:text-[13px] font-semibold ${
+                              declined ? "text-jaguar-ink/45 line-through" : "text-jaguar-ink"
+                            }`}
+                          >
                             {player.nickname || fullName}
                           </span>
                         </motion.div>

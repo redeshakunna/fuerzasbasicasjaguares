@@ -63,6 +63,56 @@ export async function lookupRsvp(token: string): Promise<RsvpLookupResult | null
   };
 }
 
+export interface RsvpRosterEntry {
+  playerId: string;
+  playerFirstName: string;
+  playerNickname: string | null;
+  playerPhotoUrl: string | null;
+  response: RsvpResponse | null;
+  reason: string | null;
+  isExpired: boolean;
+}
+
+export interface RsvpMatchRosterResult {
+  activityTitle: string | null;
+  activityDate: string | null;
+  activityTime: string | null;
+  activityLocation: string | null;
+  roster: RsvpRosterEntry[];
+}
+
+/**
+ * Roster público (sin sesión) de convocados de un partido, detrás de un solo link
+ * compartido — el jugador toca su propio nombre en vez de recibir un link personal.
+ * Pasa por `rsvp_match_roster` (SECURITY DEFINER) por la misma razón que `rsvp_lookup`.
+ */
+export async function getRsvpMatchRoster(matchId: string): Promise<RsvpMatchRosterResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rsvp_match_roster", { p_match_id: matchId });
+
+  const first = data?.[0];
+  if (error || !data || !first) {
+    if (error) console.error("getRsvpMatchRoster() falló:", error);
+    return { activityTitle: null, activityDate: null, activityTime: null, activityLocation: null, roster: [] };
+  }
+
+  return {
+    activityTitle: first.activity_title,
+    activityDate: first.activity_date,
+    activityTime: first.activity_time,
+    activityLocation: first.activity_location,
+    roster: data.map((row) => ({
+      playerId: row.player_id,
+      playerFirstName: row.player_first_name,
+      playerNickname: row.player_nickname,
+      playerPhotoUrl: row.player_photo_url,
+      response: asRsvpResponse(row.response),
+      reason: row.reason,
+      isExpired: Boolean(row.is_expired),
+    })),
+  };
+}
+
 export interface RsvpStatus {
   response: RsvpResponse | null;
   reason: string | null;

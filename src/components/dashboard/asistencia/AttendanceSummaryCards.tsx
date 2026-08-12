@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { CalendarClock, CheckCircle2, ShieldCheck, XCircle } from "lucide-react";
+import { CalendarClock, CheckCircle2, MessageCircle, ShieldCheck, XCircle } from "lucide-react";
 import { Card } from "../ui/Card";
 
 function StatCard({
@@ -27,24 +27,37 @@ function StatCard({
   );
 }
 
-/** Únicamente los 4 conteos de asistencia — sin gráficos, sin reportes. */
+/** Los 4 conteos de asistencia, más "Confirmado" (RSVP por WhatsApp) cuando aplica — sin gráficos, sin reportes. */
 export function AttendanceSummaryCards({
   presentes,
   tarde,
   justificados,
   ausentes,
   total,
+  rsvpConfirmed,
 }: {
   presentes: number;
   tarde: number;
   justificados: number;
   ausentes: number;
   total: number;
+  /** Convocados que confirmaron por WhatsApp — solo se pasa quando la actividad es un partido con RSVP. */
+  rsvpConfirmed?: number;
 }) {
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+  const hasRsvp = rsvpConfirmed !== undefined;
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className={`grid grid-cols-2 gap-4 sm:grid-cols-4 ${hasRsvp ? "lg:grid-cols-5" : ""}`}>
+      {hasRsvp ? (
+        <StatCard
+          icon={MessageCircle}
+          iconClass="bg-jaguar-turquoise-500/10 text-jaguar-turquoise-600"
+          value={rsvpConfirmed}
+          label="Confirmado"
+          pct={pct(rsvpConfirmed)}
+        />
+      ) : null}
       <StatCard icon={CheckCircle2} iconClass="bg-jaguar-green-50 text-jaguar-green-600" value={presentes} label="Presentes" pct={pct(presentes)} />
       <StatCard icon={CalendarClock} iconClass="bg-jaguar-gold-500/15 text-jaguar-gold-600" value={tarde} label="Tarde" pct={pct(tarde)} />
       <StatCard

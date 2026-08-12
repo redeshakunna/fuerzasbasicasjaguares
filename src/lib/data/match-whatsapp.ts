@@ -6,12 +6,12 @@ import type { PlayerRow } from "./players";
 export interface MatchCallupWhatsAppInput {
   match: MatchRow;
   confirmedPlayers: PlayerRow[];
-  /** Link personal de confirmación por jugador (rsvp) — opcional, si no hay se omite. */
-  rsvpLinks?: Record<string, string>;
+  /** Link único de confirmación para toda la convocatoria — cada jugador elige su nombre ahí. */
+  rsvpLink?: string;
 }
 
 /** Arma el texto de convocatoria oficial de un partido — listo para WhatsApp click-to-chat. */
-export function buildMatchCallupMessage({ match, confirmedPlayers, rsvpLinks }: MatchCallupWhatsAppInput): string {
+export function buildMatchCallupMessage({ match, confirmedPlayers, rsvpLink }: MatchCallupWhatsAppInput): string {
   return [
     "*ACADEMIA JAGUARES DE CÓRDOBA*",
     "*Convocatoria Oficial de Partido*",
@@ -24,14 +24,10 @@ export function buildMatchCallupMessage({ match, confirmedPlayers, rsvpLinks }: 
     match.competition ? `Competencia: ${match.competition}` : null,
     "",
     "*Convocados:*",
-    ...(confirmedPlayers.length > 0
-      ? confirmedPlayers.map((p, i) => {
-          const link = rsvpLinks?.[p.id];
-          const base = `${i + 1}. ${getFullName(p)}`;
-          return link ? `${base}\n   👉 Confirma tu asistencia: ${link}` : base;
-        })
-      : ["Por definir"]),
+    ...(confirmedPlayers.length > 0 ? confirmedPlayers.map((p, i) => `${i + 1}. ${getFullName(p)}`) : ["Por definir"]),
     "",
+    rsvpLink ? `👉 Confirma tu asistencia acá (elige tu nombre en la lista): ${rsvpLink}` : null,
+    rsvpLink ? "" : null,
     "*No olvides traer:*",
     "- Uniforme oficial",
     "- Guayos",

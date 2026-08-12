@@ -64,6 +64,10 @@ export function AsistenciaShell({
     };
   }, [statuses]);
 
+  const rsvpConfirmed = rsvpByPlayer
+    ? players.filter((p) => rsvpByPlayer[p.id]?.response === "Confirmado").length
+    : undefined;
+
   function handleChange(playerId: string, status: AttendanceStatus) {
     if (isLocked) return;
     setSaved(false);
@@ -118,7 +122,7 @@ export function AsistenciaShell({
 
   return (
     <div className="space-y-6 pb-4">
-      <AttendanceSummaryCards {...counts} total={players.length} />
+      <AttendanceSummaryCards {...counts} total={players.length} rsvpConfirmed={rsvpConfirmed} />
 
       {isLocked ? (
         <div className="flex items-start gap-3 rounded-2xl border border-jaguar-ink/10 bg-jaguar-ink/[0.03] px-4 py-3.5">
