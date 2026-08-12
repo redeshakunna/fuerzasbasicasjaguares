@@ -43,8 +43,21 @@ export default async function ConfirmarPage({ params }: ConfirmarPageProps) {
             <div className="py-6 text-center">
               <p className="text-[15px] font-bold text-jaguar-ink">Este enlace no es válido</p>
               <p className="mt-1.5 text-[13px] text-jaguar-ink/50">
-                Puede que ya haya expirado o esté mal copiado. Habla con tu técnico si necesitas otro.
+                Puede que esté mal copiado. Habla con tu técnico si necesitas otro.
               </p>
+            </div>
+          ) : info.isExpired ? (
+            <div className="py-6 text-center">
+              <p className="text-[15px] font-bold text-jaguar-ink">Este enlace ya venció</p>
+              <p className="mt-1.5 text-[13px] text-jaguar-ink/50">
+                {info.activityTitle ? `${info.activityTitle} ya pasó o está por comenzar. ` : ""}
+                Habla con tu técnico si necesitas confirmar algo.
+              </p>
+              {info.currentResponse ? (
+                <p className="mt-3 text-[12.5px] font-semibold text-jaguar-ink/60">
+                  Tu última respuesta fue: {info.currentResponse === "Confirmado" ? "Voy" : "No podré ir"}
+                </p>
+              ) : null}
             </div>
           ) : (
             <RsvpConfirmClient token={token} info={info} />

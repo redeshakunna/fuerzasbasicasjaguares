@@ -123,6 +123,16 @@ export default async function AsistenciaPage({ searchParams }: AsistenciaPagePro
       ...(match.competition ? [{ icon: Trophy, label: match.competition }] : []),
     ];
 
+    const rsvpEntries = [...rsvpByPlayerMap.values()];
+    const rsvpSummary =
+      rsvpEntries.length > 0
+        ? {
+            confirmed: rsvpEntries.filter((r) => r.response === "Confirmado").length,
+            declined: rsvpEntries.filter((r) => r.response === "No asiste").length,
+            pending: rsvpEntries.filter((r) => r.response === null).length,
+          }
+        : undefined;
+
     return (
       <div className="space-y-6">
         {header}

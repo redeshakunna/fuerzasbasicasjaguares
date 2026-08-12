@@ -510,6 +510,7 @@ export type Database = {
         Row: {
           academia_id: string | null
           created_at: string
+          expires_at: string | null
           id: string
           match_id: string | null
           player_id: string
@@ -522,6 +523,7 @@ export type Database = {
         Insert: {
           academia_id?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           match_id?: string | null
           player_id: string
@@ -534,6 +536,7 @@ export type Database = {
         Update: {
           academia_id?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           match_id?: string | null
           player_id?: string
@@ -1427,6 +1430,7 @@ export type Database = {
           activity_title: string
           current_reason: string
           current_response: string
+          is_expired: boolean
           player_first_name: string
           player_nickname: string
           player_photo_url: string

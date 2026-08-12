@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronDown, ClipboardCheck, Loader2, MessageCircle, MoreVertical } from "lucide-react";
+import { CheckCircle2, ChevronDown, ClipboardCheck, Loader2, MessageCircle, MoreVertical, XCircle } from "lucide-react";
 import { Avatar } from "../ui/Avatar";
 import { Card, CardHeader } from "../ui/Card";
 import { StarRating } from "../ui/StarRating";
@@ -12,6 +12,7 @@ import { callupPositionLabel, callupPositionOrder, getFullName, sortRosterForCal
 import { whatsAppShareUrl } from "@/lib/training/whatsapp";
 import type { PlayerRow } from "@/lib/data/players";
 import type { CallupRow } from "@/lib/data/match-callups";
+import type { RsvpStatus } from "@/lib/data/match-rsvp";
 import type { Enums } from "@/lib/supabase/database.types";
 
 type CallStatus = Enums<"call_status">;
@@ -66,11 +67,13 @@ export function CallupList({
   category,
   players,
   initialCallups,
+  rsvpByPlayer,
 }: {
   matchId: string;
   category: string;
   players: PlayerRow[];
   initialCallups: CallupRow[];
+  rsvpByPlayer?: Record<string, RsvpStatus>;
 }) {
   const sortedRoster = useMemo(() => sortRosterForCallup(players), [players]);
   const callupByPlayer = useMemo(() => new Map(initialCallups.map((c) => [c.player_id, c])), [initialCallups]);
@@ -232,6 +235,7 @@ export function CallupList({
                 const isExpanded = expanded === player.id;
                 const isSpecial = row.availability !== "Disponible";
                 const disableCheckbox = isSpecial || (!row.confirmed && atMax);
+                const rsvp = rsvpByPlayer?.[player.id];
 
                 return (
                   <div key={player.id} className="py-3">
@@ -271,6 +275,24 @@ export function CallupList({
                           {player.rating ? <StarRating value={player.rating} size={10} /> : null}
                         </div>
                       </Link>
+
+                      {row.confirmed && !isSpecial && rsvp?.response ? (
+                        <span
+                          title={rsvp.response === "Confirmado" ? "Confirmó por WhatsApp" : `Avisó que no va${rsvp.reason ? `: ${rsvp.reason}` : ""}`}
+                          className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] lg:text-[11px] font-bold ${
+                            rsvp.response === "Confirmado"
+                              ? "bg-jaguar-green-500/10 text-jaguar-green-700"
+                              : "bg-jaguar-maroon-500/10 text-jaguar-maroon-600"
+                          }`}
+                        >
+                          {rsvp.response === "Confirmado" ? (
+                            <CheckCircle2 className="h-3 w-3" strokeWidth={2.2} aria-hidden />
+                          ) : (
+                            <XCircle className="h-3 w-3" strokeWidth={2.2} aria-hidden />
+                          )}
+                          <span className="hidden sm:inline">{rsvp.response === "Confirmado" ? "Confirmó" : "No va"}</span>
+                        </span>
+                      ) : null}
 
                       {isSpecial ? (
                         <span className="rounded-full bg-jaguar-maroon-500/10 px-2.5 py-1 text-[10.5px] lg:text-[11.5px] font-bold uppercase tracking-[0.02em] text-jaguar-maroon-600">

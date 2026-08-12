@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 import { getSiteUrl } from "@/lib/site-url";
 import { buildMatchCallupMessage } from "@/lib/data/match-whatsapp";
+import { computeRsvpExpiry } from "@/lib/data/match-rsvp";
 import { sortRosterForCallup } from "@/lib/data/players-stats";
 import type { Enums } from "@/lib/supabase/database.types";
 
@@ -198,8 +199,9 @@ export async function buildCallupWhatsAppMessage(matchId: string): Promise<Callu
     return { error: "No se pudo leer el plantel convocado." };
   }
 
+  const expiresAt = computeRsvpExpiry(match.match_date, match.match_time);
   const { error: upsertError } = await supabase.from("match_rsvp").upsert(
-    playerIds.map((playerId) => ({ match_id: matchId, player_id: playerId })),
+    playerIds.map((playerId) => ({ match_id: matchId, player_id: playerId, expires_at: expiresAt })),
     { onConflict: "match_id,player_id", ignoreDuplicates: true },
   );
   if (upsertError) {

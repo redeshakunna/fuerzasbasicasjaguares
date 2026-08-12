@@ -7,6 +7,7 @@ import { CallupList } from "@/components/dashboard/partidos/CallupList";
 import { getMatchById } from "@/lib/data/matches";
 import { getPlayers } from "@/lib/data/players";
 import { getCallupsForMatch } from "@/lib/data/match-callups";
+import { getRsvpStatusForMatch } from "@/lib/data/match-rsvp";
 import { matchOutcome, outcomeBadgeTone } from "@/lib/data/match-stats";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,11 @@ export default async function MatchDetailPage({ params }: MatchDetailPageProps) 
   const match = await getMatchById(id);
   if (!match) notFound();
 
-  const [players, callups] = await Promise.all([getPlayers(match.category), getCallupsForMatch(match.id)]);
+  const [players, callups, rsvpByPlayerMap] = await Promise.all([
+    getPlayers(match.category),
+    getCallupsForMatch(match.id),
+    getRsvpStatusForMatch(match.id),
+  ]);
   const roster = [...players].sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
   const outcome = matchOutcome(match);
 
@@ -52,7 +57,13 @@ export default async function MatchDetailPage({ params }: MatchDetailPageProps) 
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_480px]">
         <MatchDetailForm match={match} />
-        <CallupList matchId={match.id} category={match.category} players={roster} initialCallups={callups} />
+        <CallupList
+          matchId={match.id}
+          category={match.category}
+          players={roster}
+          initialCallups={callups}
+          rsvpByPlayer={Object.fromEntries(rsvpByPlayerMap)}
+        />
       </div>
     </div>
   );
