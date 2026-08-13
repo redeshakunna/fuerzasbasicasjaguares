@@ -27,6 +27,7 @@ export function AsistenciaShell({
   closure,
   canClose,
   rsvpByPlayer,
+  manualNoShow,
 }: {
   activity: AttendanceActivity;
   category: string;
@@ -35,6 +36,8 @@ export function AsistenciaShell({
   closure: AttendanceClosureInfo | null;
   canClose: boolean;
   rsvpByPlayer?: Record<string, RsvpStatus>;
+  /** Jugadores que el técnico marcó manualmente como "No asistirá" en la Convocatoria. */
+  manualNoShow?: Record<string, boolean>;
 }) {
   const router = useRouter();
   const isLocked = closure !== null;
@@ -42,10 +45,11 @@ export function AsistenciaShell({
     const base: Record<string, AttendanceStatus> = {};
     players.forEach((p) => {
       // Si todavía no hay asistencia registrada para este jugador en esta actividad,
-      // y avisó por WhatsApp que no puede ir, arrancamos en "Ausente" en vez de
-      // "Presente" — el profesor lo puede corregir con un clic si al final sí llegó.
-      const rsvpDeclined = rsvpByPlayer?.[p.id]?.response === "No asiste";
-      base[p.id] = initialStatuses[p.id] ?? (rsvpDeclined ? "Ausente" : "Presente");
+      // y avisó por WhatsApp (o el técnico ya lo marcó en la convocatoria) que no
+      // puede ir, arrancamos en "Ausente" en vez de "Presente" — se corrige con un
+      // clic si al final sí llegó.
+      const expectedAbsent = rsvpByPlayer?.[p.id]?.response === "No asiste" || Boolean(manualNoShow?.[p.id]);
+      base[p.id] = initialStatuses[p.id] ?? (expectedAbsent ? "Ausente" : "Presente");
     });
     return base;
   });
@@ -167,6 +171,7 @@ export function AsistenciaShell({
         onChange={handleChange}
         readOnly={isLocked}
         rsvpByPlayer={rsvpByPlayer}
+        manualNoShow={manualNoShow}
       />
 
       {error ? (

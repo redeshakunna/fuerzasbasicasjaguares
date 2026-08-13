@@ -34,12 +34,15 @@ export function AttendancePlayerList({
   onChange,
   readOnly = false,
   rsvpByPlayer,
+  manualNoShow,
 }: {
   players: PlayerRow[];
   statuses: Record<string, AttendanceStatus>;
   onChange: (playerId: string, status: AttendanceStatus) => void;
   readOnly?: boolean;
   rsvpByPlayer?: Record<string, RsvpStatus>;
+  /** Jugadores que el técnico marcó manualmente como "No asistirá" en la Convocatoria. */
+  manualNoShow?: Record<string, boolean>;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AttendanceStatus | "Todos">("Todos");
@@ -90,6 +93,7 @@ export function AttendancePlayerList({
             const fullName = getFullName(player);
             const status = statuses[player.id];
             const rsvp = rsvpByPlayer?.[player.id];
+            const expectedAbsent = rsvp?.response === "No asiste" || Boolean(manualNoShow?.[player.id]);
             return (
               <div
                 key={player.id}
@@ -103,7 +107,7 @@ export function AttendancePlayerList({
                     className={`shrink-0 rounded-full ${
                       rsvp?.response === "Confirmado"
                         ? "ring-2 ring-jaguar-green-500 ring-offset-2 ring-offset-white"
-                        : rsvp?.response === "No asiste"
+                        : expectedAbsent
                           ? "ring-2 ring-jaguar-maroon-400 ring-offset-2 ring-offset-white"
                           : ""
                     }`}
@@ -131,6 +135,14 @@ export function AttendancePlayerList({
                         <XCircle className="h-3 w-3" strokeWidth={2.2} aria-hidden />
                       )}
                       <span className="hidden sm:inline">{rsvp.response === "Confirmado" ? "Confirmó" : "No va"}</span>
+                    </span>
+                  ) : !rsvp?.response && manualNoShow?.[player.id] ? (
+                    <span
+                      title="Marcado como No asistirá en la convocatoria"
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-jaguar-maroon-500/10 px-2 py-1 text-[10px] lg:text-[11px] font-bold text-jaguar-maroon-600"
+                    >
+                      <XCircle className="h-3 w-3" strokeWidth={2.2} aria-hidden />
+                      <span className="hidden sm:inline">No asistirá</span>
                     </span>
                   ) : null}
                 </div>

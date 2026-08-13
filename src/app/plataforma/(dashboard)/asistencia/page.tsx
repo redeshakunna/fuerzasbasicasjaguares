@@ -119,8 +119,15 @@ export default async function AsistenciaPage({ searchParams }: AsistenciaPagePro
 
     // La asistencia de un partido es solo de los convocados guardados, no de toda la
     // categoría — si todavía no se guardó la convocatoria, no hay a quién marcar.
-    const convocadoIds = new Set(callups.filter((c) => c.call_status === "Confirmado").map((c) => c.player_id));
+    // Incluye también a quien el técnico ya marcó "No asistirá" en la convocatoria:
+    // sigue siendo un convocado, solo que ya sabemos que no va a estar.
+    const convocadoIds = new Set(
+      callups.filter((c) => c.call_status === "Confirmado" || c.call_status === "No asistirá").map((c) => c.player_id),
+    );
     const players = roster.filter((p) => convocadoIds.has(p.id));
+    const manualNoShow = Object.fromEntries(
+      callups.filter((c) => c.call_status === "No asistirá").map((c) => [c.player_id, true]),
+    );
 
     const todayISO = new Date().toISOString().slice(0, 10);
     const canClose = match.match_date <= todayISO;
@@ -198,6 +205,7 @@ export default async function AsistenciaPage({ searchParams }: AsistenciaPagePro
               closure={closure}
               canClose={canClose}
               rsvpByPlayer={Object.fromEntries(rsvpByPlayerMap)}
+              manualNoShow={manualNoShow}
             />
           </div>
           <AttendanceHistoryCard entries={history} category={category} currentActivity={{ kind: "partido", id: match.id }} />
