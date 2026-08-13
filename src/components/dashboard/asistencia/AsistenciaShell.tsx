@@ -41,7 +41,11 @@ export function AsistenciaShell({
   const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>(() => {
     const base: Record<string, AttendanceStatus> = {};
     players.forEach((p) => {
-      base[p.id] = initialStatuses[p.id] ?? "Presente";
+      // Si todavía no hay asistencia registrada para este jugador en esta actividad,
+      // y avisó por WhatsApp que no puede ir, arrancamos en "Ausente" en vez de
+      // "Presente" — el profesor lo puede corregir con un clic si al final sí llegó.
+      const rsvpDeclined = rsvpByPlayer?.[p.id]?.response === "No asiste";
+      base[p.id] = initialStatuses[p.id] ?? (rsvpDeclined ? "Ausente" : "Presente");
     });
     return base;
   });
