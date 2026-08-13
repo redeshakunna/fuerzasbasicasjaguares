@@ -11,6 +11,7 @@ import { getPlayers } from "@/lib/data/players";
 import { getEvaluationsForActivity } from "@/lib/data/evaluations";
 import { getAttendanceForTraining, getAttendanceForMatch } from "@/lib/data/attendance";
 import { getCallupsForMatches } from "@/lib/data/match-callups";
+import { getRsvpStatusForMatch } from "@/lib/data/match-rsvp";
 import { getStaffNameById } from "@/lib/data/staff";
 import { getActivitiesForCategory, groupActivities } from "@/lib/data/activities";
 import { parseCategory } from "@/lib/data/categories";
@@ -114,11 +115,12 @@ export default async function EvaluacionesPage({ searchParams }: EvaluacionesPag
       );
     }
 
-    const [players, evaluationsByPlayerMap, attendanceByPlayerMap, callupsByMatch] = await Promise.all([
+    const [roster, evaluationsByPlayerMap, attendanceByPlayerMap, callupsByMatch, rsvpByPlayerMap] = await Promise.all([
       getPlayers(category),
       getEvaluationsForActivity("partido", match.id),
       getAttendanceForMatch(match.id),
       getCallupsForMatches([match.id]),
+      getRsvpStatusForMatch(match.id),
     ]);
 
     const callupByPlayer = Object.fromEntries((callupsByMatch[match.id] ?? []).map((c) => [c.player_id, c]));
@@ -129,20 +131,58 @@ export default async function EvaluacionesPage({ searchParams }: EvaluacionesPag
       ...(match.competition ? [{ icon: Trophy, label: match.competition }] : []),
     ];
 
+    // Evaluar solo tiene sentido para quien realmente va a estar en la cancha —
+    // convocados confirmados, sin contar a quien ya avisó (por WhatsApp o manual)
+    // que no va a asistir.
+    const players = roster.filter((p) => {
+      const callup = callupByPlayer[p.id];
+      if (!callup || callup.call_status !== "Confirmado") return false;
+      if (rsvpByPlayerMap.get(p.id)?.response === "No asiste") return false;
+      return true;
+    });
+
+    const activityInfoCard = (
+      <ActivityInfoCard
+        icon={Trophy}
+        iconTone="gold"
+        title={activityTitle}
+        dateLabel={formatFullDate(match.match_date)}
+        timeLabel={formatTime(match.match_time)}
+        category={category}
+        meta={meta}
+        viewHref={`/plataforma/partidos/${match.id}`}
+        viewLabel="Ver partido y convocatoria"
+      />
+    );
+
+    if (players.length === 0) {
+      return (
+        <div className="space-y-6">
+          {header}
+          {activityInfoCard}
+          <Card className="flex flex-col items-center gap-3 p-14 text-center">
+            <Trophy className="h-8 w-8 text-jaguar-ink/25" strokeWidth={1.6} aria-hidden />
+            <p className="text-[14px] lg:text-[15.5px] font-semibold text-jaguar-ink/60">
+              Todavía no hay convocados confirmados para evaluar en este partido.
+            </p>
+            <p className="max-w-sm text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">
+              Arma la convocatoria primero — si todos avisaron que no van, tampoco hay a quién evaluar todavía.
+            </p>
+            <Link
+              href={`/plataforma/partidos/${match.id}`}
+              className="rounded-xl bg-jaguar-green-600 px-4 py-2 text-[13px] lg:text-[14px] font-semibold text-white hover:bg-jaguar-green-700"
+            >
+              Armar convocatoria
+            </Link>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         {header}
-        <ActivityInfoCard
-          icon={Trophy}
-          iconTone="gold"
-          title={activityTitle}
-          dateLabel={formatFullDate(match.match_date)}
-          timeLabel={formatTime(match.match_time)}
-          category={category}
-          meta={meta}
-          viewHref={`/plataforma/partidos/${match.id}`}
-          viewLabel="Ver partido y convocatoria"
-        />
+        {activityInfoCard}
         <EvaluacionesShell
           activity={{ kind: "partido", id: match.id }}
           activityTitle={activityTitle}
