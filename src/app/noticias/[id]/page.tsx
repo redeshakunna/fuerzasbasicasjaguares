@@ -7,8 +7,10 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { PageHeaderBanner } from "@/components/layout/PageHeaderBanner";
 import { PageClosingCta } from "@/components/layout/PageClosingCta";
+import { ShareBar } from "@/components/noticias/ShareBar";
 import { navLinks } from "@/components/hero/hero.data";
 import { getNewsItem, newsCategoryClass, newsItems } from "@/components/sections/news.data";
+import { getSiteUrl } from "@/lib/site-url";
 
 export function generateStaticParams() {
   return newsItems.filter((item) => item.body).map((item) => ({ id: item.id }));
@@ -22,9 +24,30 @@ export async function generateMetadata({
   const { id } = await params;
   const item = getNewsItem(id);
   if (!item) return { title: "Noticia — Fuerzas Básicas de Jaguares de Córdoba FC" };
+
+  const siteUrl = await getSiteUrl();
+  const pageUrl = `${siteUrl}/noticias/${item.id}`;
+  const imageUrl = `${siteUrl}${item.image.src}`;
+  const description = item.excerpt ?? item.title;
+
   return {
     title: `${item.title} — Fuerzas Básicas de Jaguares de Córdoba FC`,
-    description: item.excerpt ?? item.title,
+    description,
+    openGraph: {
+      title: item.title,
+      description,
+      url: pageUrl,
+      siteName: "Fuerzas Básicas de Jaguares de Córdoba FC",
+      images: [{ url: imageUrl, width: 1200, height: 675, alt: item.image.alt }],
+      locale: "es_CO",
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: item.title,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -37,6 +60,9 @@ export default async function NoticiaDetailPage({
   const item = getNewsItem(id);
   if (!item || !item.body) notFound();
 
+  const siteUrl = await getSiteUrl();
+  const pageUrl = `${siteUrl}/noticias/${item.id}`;
+
   return (
     <>
       <Navbar links={navLinks} activeHref="/noticias" variant="solid" />
@@ -46,7 +72,7 @@ export default async function NoticiaDetailPage({
         <article className="px-4 py-12 md:px-8 md:py-16 lg:px-12">
           <div className="mx-auto max-w-[860px]">
             <Link
-              href="/#noticias"
+              href="/noticias"
               className="group inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.08em] text-jaguar-green-600"
             >
               <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-x-0.5" strokeWidth={2.25} aria-hidden />
@@ -63,6 +89,10 @@ export default async function NoticiaDetailPage({
                 <CalendarDays className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
                 {item.date}
               </span>
+            </div>
+
+            <div className="mt-5">
+              <ShareBar title={item.title} url={pageUrl} />
             </div>
 
             <div className="relative mt-6 aspect-[16/9] w-full overflow-hidden rounded-3xl">
@@ -116,6 +146,10 @@ export default async function NoticiaDetailPage({
                 <p className="text-[13.5px] font-semibold text-jaguar-green-600">{item.matchReport.nextMatch}</p>
               </div>
             ) : null}
+
+            <div className="mt-10 border-t border-jaguar-ink/8 pt-6">
+              <ShareBar title={item.title} url={pageUrl} />
+            </div>
           </div>
         </article>
 

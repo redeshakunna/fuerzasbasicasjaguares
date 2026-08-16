@@ -138,7 +138,7 @@ function NewsCarousel() {
       <div className="flex items-center justify-between">
         <SectionHeading>Noticias destacadas</SectionHeading>
         <Link
-          href="#noticias"
+          href="/noticias"
           className="group flex items-center gap-1 text-[12px] font-bold uppercase tracking-[0.08em] text-jaguar-green-600"
         >
           Ver todas
