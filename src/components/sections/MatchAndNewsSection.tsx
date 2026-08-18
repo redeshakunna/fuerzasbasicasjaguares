@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, Shield } from "lucide-react";
 import { newsCategoryClass, newsItems } from "./news.data";
+import { MatchCalendarModal } from "./MatchCalendarModal";
 import type { MatchRow } from "@/lib/data/matches";
 
 const weekdayFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "long", timeZone: "UTC" });
@@ -50,10 +51,11 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 const JAGUARES_NAME = "Jaguares de Córdoba";
 const JAGUARES_LOGO = "/brand/logo-fuerzas-basicas.png";
-const CALENDAR_HREF = "#calendario";
 
 interface NextMatchCardProps {
   matches: MatchRow[];
+  /** Todos los próximos partidos (cualquier estado) — para el calendario emergente informativo. */
+  allMatches: MatchRow[];
 }
 
 /**
@@ -61,9 +63,10 @@ interface NextMatchCardProps {
  * fijo, si hay varios se convierte en un slide corto (flechas + puntos,
  * con autoplay pausable) para no ocupar más espacio del que ya tenía.
  */
-function NextMatchCard({ matches }: NextMatchCardProps) {
+function NextMatchCard({ matches, allMatches }: NextMatchCardProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goTo = useCallback(
@@ -125,6 +128,20 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
           <p className="mt-3 text-[13.5px] text-jaguar-ink/50">
             Todavía no hay partidos confirmados. Vuelve pronto para ver la próxima fecha.
           </p>
+          {allMatches.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              className="group mt-5 inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-full border-2 border-jaguar-green-500 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.08em] text-jaguar-green-600 transition-colors hover:bg-jaguar-green-50"
+            >
+              Ver calendario
+              <ArrowRight
+                className="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            </button>
+          ) : null}
         </div>
       ) : (
         <AnimatePresence mode="wait">
@@ -136,9 +153,9 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="mt-7 flex flex-1 flex-col"
           >
-            {/* Escudos + VS */}
-            <div className="flex items-center gap-5">
-              <div className="flex flex-col items-center gap-2">
+            {/* Escudos + VS + contra quién */}
+            <div className="flex items-start gap-5">
+              <div className="flex w-16 flex-col items-center gap-2 text-center md:w-[72px]">
                 <Image
                   src={JAGUARES_LOGO}
                   alt={JAGUARES_NAME}
@@ -146,15 +163,18 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
                   height={64}
                   className="h-14 w-14 object-contain md:h-16 md:w-16"
                 />
+                <span className="text-[11px] font-semibold leading-tight text-jaguar-ink/55">Jaguares</span>
               </div>
-              <span className="font-display text-base font-normal text-jaguar-ink/35">VS</span>
+              <span className="mt-4 shrink-0 font-display text-base font-normal text-jaguar-ink/35 md:mt-5">VS</span>
               {/* Todavía no manejamos escudos de rivales — placeholder genérico */}
-              <span
-                title={match.opponent}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-jaguar-ink/20 text-jaguar-ink/30 md:h-16 md:w-16"
-              >
-                <Shield className="h-6 w-6" strokeWidth={1.6} aria-hidden />
-              </span>
+              <div className="flex w-16 flex-col items-center gap-2 text-center md:w-[72px]">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-jaguar-ink/20 text-jaguar-ink/30 md:h-16 md:w-16">
+                  <Shield className="h-6 w-6" strokeWidth={1.6} aria-hidden />
+                </span>
+                <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-jaguar-ink/55">
+                  {match.opponent}
+                </span>
+              </div>
             </div>
 
             {/* Datos del partido */}
@@ -177,8 +197,9 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
                 </div>
               </dl>
 
-              <Link
-                href={CALENDAR_HREF}
+              <button
+                type="button"
+                onClick={() => setCalendarOpen(true)}
                 className="group mt-6 inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-full border-2 border-jaguar-green-500 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.08em] text-jaguar-green-600 transition-colors hover:bg-jaguar-green-50"
               >
                 Ver calendario
@@ -187,7 +208,7 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
                   strokeWidth={2.25}
                   aria-hidden
                 />
-              </Link>
+              </button>
             </div>
           </motion.div>
         </AnimatePresence>
@@ -210,6 +231,8 @@ function NextMatchCard({ matches }: NextMatchCardProps) {
           ))}
         </div>
       ) : null}
+
+      <MatchCalendarModal matches={allMatches} open={calendarOpen} onClose={() => setCalendarOpen(false)} />
     </motion.div>
   );
 }
@@ -307,23 +330,27 @@ function NewsCarousel() {
 }
 
 interface MatchAndNewsSectionProps {
-  /** Partidos confirmados y próximos, más cercano primero — ver `getUpcomingConfirmedMatches()`. */
+  /** Partidos confirmados y próximos, más cercano primero — se usan en la tarjeta/slide. */
   matches: MatchRow[];
+  /** Todos los próximos partidos (cualquier estado) — se usan en el calendario emergente informativo. */
+  allMatches: MatchRow[];
 }
 
 /**
  * Sección "Próximo partido" + "Noticias destacadas".
  *
  * El partido usa datos reales de Supabase (solo partidos con estado
- * "Confirmado" llegan aquí, ver `getUpcomingConfirmedMatches()`); si hay
- * más de uno se muestra como slide corto. Las noticias siguen siendo
+ * "Confirmado" se destacan en la tarjeta, ver `getUpcomingMatches()` en
+ * `src/app/page.tsx`); si hay más de uno se muestra como slide corto. El
+ * botón "Ver calendario" abre una ventana emergente puramente informativa
+ * con todos los próximos partidos programados. Las noticias siguen siendo
  * contenido de ejemplo — ver comentarios en `news.data.ts`.
  */
-export function MatchAndNewsSection({ matches }: MatchAndNewsSectionProps) {
+export function MatchAndNewsSection({ matches, allMatches }: MatchAndNewsSectionProps) {
   return (
     <section id="proximo-partido" className="bg-jaguar-mist/40 px-4 py-16 md:px-8 md:py-20 lg:px-12">
       <div id="noticias" className="mx-auto grid max-w-[1600px] gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
-        <NextMatchCard matches={matches} />
+        <NextMatchCard matches={matches} allMatches={allMatches} />
         <NewsCarousel />
       </div>
     </section>
