@@ -5,9 +5,10 @@ import { MatchAndNewsSection } from "@/components/sections/MatchAndNewsSection";
 import { MethodologySection } from "@/components/sections/MethodologySection";
 import { SubQuinceSection } from "@/components/sections/SubQuinceSection";
 import { getPublicHomeStats } from "@/lib/data/public-stats";
+import { getUpcomingConfirmedMatches } from "@/lib/data/matches";
 
 export default async function Home() {
-  const stats = await getPublicHomeStats();
+  const [stats, upcomingMatches] = await Promise.all([getPublicHomeStats(), getUpcomingConfirmedMatches()]);
 
   return (
     <>
@@ -15,7 +16,7 @@ export default async function Home() {
         <HeroSection slides={heroSlides} />
         <MethodologySection />
         <SubQuinceSection stats={stats} />
-        <MatchAndNewsSection />
+        <MatchAndNewsSection matches={upcomingMatches} />
       </main>
       <Footer />
     </>
