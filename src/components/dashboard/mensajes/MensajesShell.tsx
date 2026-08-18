@@ -5,7 +5,7 @@ import { AlertTriangle, ChevronDown, MessageCircle, Send } from "lucide-react";
 import { Card, CardHeader } from "@/components/dashboard/ui/Card";
 import { Avatar } from "@/components/dashboard/ui/Avatar";
 import { enviarRecordatorios } from "@/app/plataforma/(dashboard)/finanzas/actions";
-import { waHref, type MessageRecipient, type MatchReplacementGroup } from "@/lib/data/messaging";
+import { waHref, type MessageRecipient, type MatchReplacementGroup } from "@/lib/data/messaging-shared";
 
 const tabs = [
   { id: "deudores", label: "Deudores" },

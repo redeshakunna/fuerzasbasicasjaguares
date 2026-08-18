@@ -1,81 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatCOP } from "@/lib/finance/format";
-
-export interface MessageRecipient {
-  playerId: string;
-  playerName: string;
-  guardianName: string;
-  /** null = sin teléfono válido registrado — el botón de envío se deshabilita. */
-  waPhone: string | null;
-  message: string;
-  /** Dato de referencia mostrado junto al nombre (monto, nº de faltas, etc.). */
-  meta: string;
-  /** Solo para deudores — permite marcar "recordatorio enviado" reusando enviarRecordatorios(). */
-  obligationId?: string;
-}
-
-export interface CallupIssuePlayer {
-  playerId: string;
-  playerName: string;
-  callStatus: string;
-}
-
-export interface MatchReplacementGroup {
-  matchId: string;
-  category: string;
-  opponent: string;
-  matchDateLabel: string;
-  matchTimeLabel: string;
-  location: string | null;
-  withdrawn: CallupIssuePlayer[];
-  candidates: MessageRecipient[];
-}
-
-const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-const monthShort = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-
-function formatDateLong(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  const dayName = dayNames[date.getDay()];
-  const cap = dayName ? dayName[0]?.toUpperCase() + dayName.slice(1) : "";
-  return `${cap} ${d} de ${monthShort[(m ?? 1) - 1]} de ${y}`;
-}
-
-function formatTime12h(value: string | null): string {
-  if (!value) return "Hora por definir";
-  const [hStr, mStr] = value.split(":");
-  const h = Number(hStr);
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${mStr ?? "00"} ${period}`;
-}
-
-function daysBetween(from: string, to: string): number {
-  const a = new Date(from).getTime();
-  const b = new Date(to).getTime();
-  return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
-}
-
-/** Normaliza un teléfono colombiano a formato internacional para wa.me (57XXXXXXXXXX). `null` si no es reconocible. */
-export function toWhatsAppPhone(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 10 && digits.startsWith("3")) return `57${digits}`;
-  if (digits.length === 12 && digits.startsWith("57")) return digits;
-  if (digits.length === 13 && digits.startsWith("057")) return `57${digits.slice(3)}`;
-  return null;
-}
-
-function firstNameOf(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
-}
-
-function waHref(phone: string, message: string): string {
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-}
-
-export { waHref };
+import {
+  formatDateLong,
+  formatTime12h,
+  daysBetween,
+  toWhatsAppPhone,
+  firstNameOf,
+  type MessageRecipient,
+  type MatchReplacementGroup,
+} from "@/lib/data/messaging-shared";
 
 /** Jugadores con obligación en estado "Vencido" para una categoría — listos para recordatorio de pago. */
 export async function getDebtorRecipients(category: string): Promise<MessageRecipient[]> {
@@ -184,35 +117,37 @@ export async function getAbsenteeRecipients(category: string, sinceDays = 14): P
     .select("id, first_name, last_name, guardian_name, guardian_phone, phone")
     .in("id", [...absencesByPlayer.keys()]);
 
-  return (players ?? []).map((player) => {
-    const dates = (absencesByPlayer.get(player.id) ?? []).sort();
-    const count = dates.length;
-    const lastDate = dates[dates.length - 1];
-    const playerName = `${player.first_name} ${player.last_name}`;
-    const guardianName = player.guardian_name || "Padre de familia";
+  return (players ?? [])
+    .map((player) => {
+      const dates = (absencesByPlayer.get(player.id) ?? []).sort();
+      const count = dates.length;
+      const lastDate = dates[dates.length - 1];
+      const playerName = `${player.first_name} ${player.last_name}`;
+      const guardianName = player.guardian_name || "Padre de familia";
 
-    const message = [
-      "*ACADEMIA JAGUARES DE CÓRDOBA*",
-      "*Aviso de inasistencia*",
-      "",
-      `Hola ${guardianName}, te escribimos de Jaguares de Córdoba.`,
-      "",
-      `${playerName} no ha asistido a ${count} ${count === 1 ? "entrenamiento" : "entrenamientos"} en las últimas ${sinceDays > 14 ? "semanas" : "dos semanas"}${lastDate ? ` (la más reciente el ${formatDateLong(lastDate)})` : ""}.`,
-      "",
-      "La constancia es clave en su proceso formativo — cualquier situación que esté afectando su asistencia, cuéntanos y buscamos cómo apoyar.",
-      "",
-      "¡Los esperamos en la próxima sesión!",
-    ].join("\n");
+      const message = [
+        "*ACADEMIA JAGUARES DE CÓRDOBA*",
+        "*Aviso de inasistencia*",
+        "",
+        `Hola ${guardianName}, te escribimos de Jaguares de Córdoba.`,
+        "",
+        `${playerName} no ha asistido a ${count} ${count === 1 ? "entrenamiento" : "entrenamientos"} en las últimas ${sinceDays > 14 ? "semanas" : "dos semanas"}${lastDate ? ` (la más reciente el ${formatDateLong(lastDate)})` : ""}.`,
+        "",
+        "La constancia es clave en su proceso formativo — cualquier situación que esté afectando su asistencia, cuéntanos y buscamos cómo apoyar.",
+        "",
+        "¡Los esperamos en la próxima sesión!",
+      ].join("\n");
 
-    return {
-      playerId: player.id,
-      playerName,
-      guardianName,
-      waPhone: toWhatsAppPhone(player.guardian_phone || player.phone),
-      message,
-      meta: `${count} ${count === 1 ? "falta" : "faltas"}${lastDate ? ` · última: ${formatDateLong(lastDate)}` : ""}`,
-    };
-  }).sort((a, b) => b.meta.localeCompare(a.meta));
+      return {
+        playerId: player.id,
+        playerName,
+        guardianName,
+        waPhone: toWhatsAppPhone(player.guardian_phone || player.phone),
+        message,
+        meta: `${count} ${count === 1 ? "falta" : "faltas"}${lastDate ? ` · última: ${formatDateLong(lastDate)}` : ""}`,
+      };
+    })
+    .sort((a, b) => b.meta.localeCompare(a.meta));
 }
 
 /** Todos los jugadores activos de una categoría, listos para un mensaje libre. */
