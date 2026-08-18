@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 import { MATCH_COLUMN, rowToPatch } from "@/lib/data/players-template";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 
 export interface ImportPlayersResult {
   error?: string;
@@ -81,7 +82,10 @@ export async function importPlayers(
       continue;
     }
 
-    const { error: updateError } = await supabase.from("players").update(patch).eq("id", existing.id);
+    const { error: updateError } = await supabase
+      .from("players")
+      .update(patch as unknown as TablesUpdate<"players">)
+      .eq("id", existing.id);
     if (updateError) {
       console.error(`importPlayers: no se pudo actualizar documento ${document}:`, updateError);
       notFound.push(document);
