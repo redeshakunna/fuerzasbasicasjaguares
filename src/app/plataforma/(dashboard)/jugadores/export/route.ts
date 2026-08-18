@@ -54,11 +54,12 @@ export async function GET(request: NextRequest) {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Jugadores");
 
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  const body = new Uint8Array(buffer);
 
   const estadoLabel = statusFilters[estadoParam] ? estadoParam : "todos";
   const fileName = `jugadores-${category.toLowerCase()}-${estadoLabel}.xlsx`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(body, {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
