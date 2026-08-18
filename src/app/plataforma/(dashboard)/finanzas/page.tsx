@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Plus, Receipt } from "lucide-react";
+import { ArrowRight, CalendarClock, Info, Plus, Receipt } from "lucide-react";
 import { Card, CardHeader } from "@/components/dashboard/ui/Card";
 import { Avatar } from "@/components/dashboard/ui/Avatar";
+import { CategorySelector } from "@/components/dashboard/CategorySelector";
 import { FinanceKpiCards } from "@/components/dashboard/finanzas/FinanceKpiCards";
 import { PaymentMethodsDonut } from "@/components/dashboard/finanzas/PaymentMethodsDonut";
 import { FinanceSectionHeader, ObligationStatusBadge, conceptIcon, conceptIconClass } from "@/components/dashboard/finanzas/shared";
@@ -13,20 +14,29 @@ import {
   markOverdueObligations,
 } from "@/lib/data/finance";
 import { formatCOP, formatShortDate } from "@/lib/finance/format";
+import { activeCategories, parseCategory } from "@/lib/data/categories";
 
 export const dynamic = "force-dynamic";
 
-/** Dashboard financiero — lo primero que ve la secretaria cada mañana. Datos reales de Supabase. */
-export default async function FinanzasDashboardPage() {
+interface FinanzasDashboardPageProps {
+  searchParams: Promise<{ categoria?: string }>;
+}
+
+/** Dashboard financiero — lo primero que ve la secretaria cada mañana. Datos reales de Supabase, filtrados por categoría. */
+export default async function FinanzasDashboardPage({ searchParams }: FinanzasDashboardPageProps) {
+  const { categoria } = await searchParams;
+  const category = parseCategory(categoria);
+  const isActiveCategory = activeCategories.includes(category);
+
   // Automatización: crea la mensualidad del mes si aún no existe — nadie tiene que generarla a mano.
   await ensureCurrentMonthMensualidades();
   // Automatización: pasa a "Vencido" lo que ya venció — base real para el disparo de recordatorios.
   await markOverdueObligations();
 
   const [summary, breakdown, obligations] = await Promise.all([
-    getFinanceSummary(),
-    getPaymentMethodBreakdown(),
-    getObligations(),
+    getFinanceSummary(category),
+    getPaymentMethodBreakdown(category),
+    getObligations(category),
   ]);
 
   const upcoming = obligations.filter((o) => o.status !== "Pagado").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -40,15 +50,26 @@ export default async function FinanzasDashboardPage() {
         title="Gestión Financiera"
         subtitle="Cuentas por cobrar, pagos y estado de cuenta de la academia."
         action={
-          <Link
-            href="/plataforma/finanzas/nuevo-cobro"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-jaguar-green-600 px-4 py-2.5 text-[13px] lg:text-[14px] font-semibold text-white transition-colors hover:bg-jaguar-green-700"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-            Nuevo cobro
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <CategorySelector active={category} basePath="/plataforma/finanzas" />
+            <Link
+              href="/plataforma/finanzas/nuevo-cobro"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-jaguar-green-600 px-4 py-2.5 text-[13px] lg:text-[14px] font-semibold text-white transition-colors hover:bg-jaguar-green-700"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              Nuevo cobro
+            </Link>
+          </div>
         }
       />
+
+      {!isActiveCategory ? (
+        <div className="flex items-center gap-2.5 rounded-xl bg-jaguar-gold-500/10 px-4 py-3 text-[13px] font-medium text-jaguar-gold-700">
+          <Info className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+          La categoría {category} aún no tiene plantel activo — no hay cobros que mostrar hasta que haya jugadores
+          registrados.
+        </div>
+      ) : null}
 
       <FinanceKpiCards summary={summary} />
 
@@ -60,7 +81,7 @@ export default async function FinanzasDashboardPage() {
               subtitle="Ordenados por fecha límite de pago"
               action={
                 <Link
-                  href="/plataforma/finanzas/cuentas-por-cobrar"
+                  href={`/plataforma/finanzas/cuentas-por-cobrar?categoria=${category}`}
                   className="flex items-center gap-1 text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-green-600 hover:text-jaguar-green-700"
                 >
                   Ver todas <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
@@ -108,7 +129,7 @@ export default async function FinanzasDashboardPage() {
               subtitle="Últimos pagos registrados"
               action={
                 <Link
-                  href="/plataforma/finanzas/historial"
+                  href={`/plataforma/finanzas/historial?categoria=${category}`}
                   className="flex items-center gap-1 text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-green-600 hover:text-jaguar-green-700"
                 >
                   Ver historial <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
@@ -164,7 +185,7 @@ export default async function FinanzasDashboardPage() {
                 <ArrowRight className="h-3.5 w-3.5 text-jaguar-ink/30" strokeWidth={2.25} aria-hidden />
               </Link>
               <Link
-                href="/plataforma/finanzas/cuentas-por-cobrar"
+                href={`/plataforma/finanzas/cuentas-por-cobrar?categoria=${category}`}
                 className="flex items-center justify-between rounded-xl border border-jaguar-ink/8 px-3.5 py-2.5 text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink/75 transition-colors hover:bg-jaguar-mist/50"
               >
                 Cuentas por cobrar
