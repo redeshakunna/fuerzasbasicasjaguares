@@ -1,7 +1,8 @@
 import Image from "next/image";
-import { Download, Upload } from "lucide-react";
 import { DashboardButton } from "../ui/Button";
 import { RegisterPlayerDialog } from "./RegisterPlayerDialog";
+import { ExportPlayersMenu } from "./ExportPlayersMenu";
+import { ImportPlayersButton } from "./ImportPlayersButton";
 import { CategorySelector } from "../CategorySelector";
 import type { Category } from "@/lib/data/categories";
 
@@ -38,12 +39,8 @@ export function PlayersPageHeader({ category }: { category: Category }) {
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <RegisterPlayerDialog />
-        <DashboardButton variant="secondary" icon={<Upload className="h-4 w-4" strokeWidth={2} />}>
-          Importar jugadores
-        </DashboardButton>
-        <DashboardButton variant="secondary" icon={<Download className="h-4 w-4" strokeWidth={2} />}>
-          Exportar
-        </DashboardButton>
+        <ImportPlayersButton />
+        <ExportPlayersMenu category={category} />
       </div>
     </div>
   );

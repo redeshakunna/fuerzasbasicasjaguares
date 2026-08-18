@@ -17,7 +17,8 @@
     "lucide-react": "^0.468.0",
     "recharts": "^3.0.0",
     "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.0"
+    "@supabase/supabase-js": "^2.112.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
