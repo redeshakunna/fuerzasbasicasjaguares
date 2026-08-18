@@ -294,16 +294,24 @@ export function CallupList({
         </div>
       ) : null}
 
-      <div className="mt-4 flex items-center justify-between px-6">
-        <p className="text-[13.5px] lg:text-[15px] font-bold text-jaguar-ink">
-          {confirmedCount} <span className="font-medium text-jaguar-ink/40">/ {TARGET_SQUAD} convocados</span>
-          {confirmedCount > TARGET_SQUAD ? (
-            <span className="ml-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-gold-600">
-              (+{confirmedCount - TARGET_SQUAD} opcional{confirmedCount - TARGET_SQUAD > 1 ? "es" : ""})
-            </span>
-          ) : null}
-        </p>
-        {atMax ? <p className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-maroon-600">Cupo máximo alcanzado ({MAX_SQUAD})</p> : null}
+      <div className="sticky top-0 z-10 mt-4 border-b border-jaguar-ink/6 bg-white/95 px-6 pb-3 backdrop-blur-sm">
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-[13.5px] lg:text-[15px] font-bold text-jaguar-ink">
+            {confirmedCount} <span className="font-medium text-jaguar-ink/40">/ {TARGET_SQUAD} convocados</span>
+            {confirmedCount > TARGET_SQUAD ? (
+              <span className="ml-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-gold-600">
+                (+{confirmedCount - TARGET_SQUAD} opcional{confirmedCount - TARGET_SQUAD > 1 ? "es" : ""})
+              </span>
+            ) : null}
+          </p>
+          {atMax ? <p className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-maroon-600">Cupo máximo alcanzado ({MAX_SQUAD})</p> : null}
+        </div>
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-jaguar-ink/6">
+          <div
+            className={`h-full rounded-full transition-all ${confirmedCount >= TARGET_SQUAD ? "bg-jaguar-green-600" : "bg-jaguar-gold-500"}`}
+            style={{ width: `${Math.min(100, Math.round((confirmedCount / TARGET_SQUAD) * 100))}%` }}
+          />
+        </div>
       </div>
 
       <div className="mt-4">
