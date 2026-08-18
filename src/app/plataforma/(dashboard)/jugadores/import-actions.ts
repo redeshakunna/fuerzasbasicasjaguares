@@ -43,8 +43,9 @@ export async function importPlayers(
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
     const firstSheet = workbook.SheetNames[0];
-    if (!firstSheet) return { error: "El archivo no tiene hojas con datos." };
-    rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+    const sheet = firstSheet ? workbook.Sheets[firstSheet] : undefined;
+    if (!sheet) return { error: "El archivo no tiene hojas con datos." };
+    rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
   } catch (err) {
     console.error("importPlayers: no se pudo leer el archivo:", err);
     return { error: "No se pudo leer el archivo. Verifica que sea el Excel exportado desde la plataforma (.xlsx)." };
