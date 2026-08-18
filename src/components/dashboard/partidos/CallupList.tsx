@@ -2,12 +2,23 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronDown, ClipboardCheck, Loader2, MessageCircle, MoreVertical, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
+  Lock,
+  Loader2,
+  MessageCircle,
+  MoreVertical,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
 import { Avatar } from "../ui/Avatar";
 import { Card, CardHeader } from "../ui/Card";
 import { StarRating } from "../ui/StarRating";
 import { CallupPitchPreview } from "./CallupPitchPreview";
-import { buildCallupWhatsAppMessage, saveCallups, type CallupRecordInput } from "@/app/plataforma/(dashboard)/partidos/actions";
+import { sendCallupWhatsApp, saveCallups, type CallupRecordInput } from "@/app/plataforma/(dashboard)/partidos/actions";
 import { callupPositionLabel, callupPositionOrder, getFullName, sortRosterForCallup } from "@/lib/data/players-stats";
 import { whatsAppShareUrl } from "@/lib/training/whatsapp";
 import type { PlayerRow } from "@/lib/data/players";
@@ -55,6 +66,13 @@ function rowToCallStatus(r: RowState): CallStatus {
   return r.confirmed ? "Confirmado" : "Pendiente";
 }
 
+function formatSentAt(iso: string): string {
+  const date = new Date(iso);
+  const datePart = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short" }).format(date);
+  const timePart = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit" }).format(date);
+  return `${datePart}, ${timePart}`;
+}
+
 /**
  * Convocatoria — trae siempre el plantel completo de la categoría, ordenado de atrás
  * hacia adelante (Porteros → Defensas → Volantes → Extremos → Delanteros) y por mejor
@@ -68,12 +86,15 @@ export function CallupList({
   players,
   initialCallups,
   rsvpByPlayer,
+  initialCallupSentAt,
 }: {
   matchId: string;
   category: string;
   players: PlayerRow[];
   initialCallups: CallupRow[];
   rsvpByPlayer?: Record<string, RsvpStatus>;
+  /** Fecha/hora del primer envío masivo por WhatsApp — null si la convocatoria no se ha cerrado todavía. */
+  initialCallupSentAt?: string | null;
 }) {
   const sortedRoster = useMemo(() => sortRosterForCallup(players), [players]);
   const callupByPlayer = useMemo(() => new Map(initialCallups.map((c) => [c.player_id, c])), [initialCallups]);
@@ -88,6 +109,8 @@ export function CallupList({
   const [error, setError] = useState<string | null>(null);
   const [isSharing, startSharingTransition] = useTransition();
   const [shareError, setShareError] = useState<string | null>(null);
+  const [callupSentAt, setCallupSentAt] = useState<string | null>(initialCallupSentAt ?? null);
+  const [confirmingResend, setConfirmingResend] = useState(false);
 
   const confirmedCount = sortedRoster.filter((p) => rows[p.id]?.confirmed).length;
   const atMax = confirmedCount >= MAX_SQUAD;
@@ -149,14 +172,22 @@ export function CallupList({
     });
   }
 
-  function handleShareWhatsApp() {
+  /**
+   * Primer clic: envía y cierra la convocatoria (marca callup_sent_at). Clics
+   * posteriores mientras ya está cerrada requieren pasar primero por el
+   * "¿Reenviar a todos?" (ver botón de reenvío) — este handler mismo sirve
+   * para ambos casos, la única diferencia es qué botón lo dispara.
+   */
+  function handleSendCallup() {
     setShareError(null);
     startSharingTransition(async () => {
-      const result = await buildCallupWhatsAppMessage(matchId);
+      const result = await sendCallupWhatsApp(matchId);
       if (result.error || !result.message) {
         setShareError(result.error ?? "No se pudo armar el mensaje.");
         return;
       }
+      if (result.callupSentAt) setCallupSentAt(result.callupSentAt);
+      setConfirmingResend(false);
       window.open(whatsAppShareUrl(result.message), "_blank");
     });
   }
@@ -175,15 +206,50 @@ export function CallupList({
               <ClipboardCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
               Ver asistencia
             </Link>
-            <button
-              type="button"
-              onClick={handleShareWhatsApp}
-              disabled={isSharing}
-              className="flex items-center gap-1.5 rounded-xl bg-[#25D366] px-3.5 py-2.5 text-[12.5px] lg:text-[13.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.5} aria-hidden /> : <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />}
-              {isSharing ? "Armando…" : "Convocatoria WhatsApp"}
-            </button>
+            {!callupSentAt ? (
+              <button
+                type="button"
+                onClick={handleSendCallup}
+                disabled={isSharing}
+                className="flex items-center gap-1.5 rounded-xl bg-[#25D366] px-3.5 py-2.5 text-[12.5px] lg:text-[13.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.5} aria-hidden /> : <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />}
+                {isSharing ? "Armando…" : "Convocatoria WhatsApp"}
+              </button>
+            ) : confirmingResend ? (
+              <div className="flex items-center gap-1.5 rounded-xl bg-jaguar-maroon-500/8 px-2.5 py-1.5">
+                <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-maroon-700">¿Reenviar a todos?</span>
+                <button
+                  type="button"
+                  onClick={handleSendCallup}
+                  disabled={isSharing}
+                  className="rounded-lg bg-jaguar-maroon-600 px-2.5 py-1.5 text-[11.5px] font-bold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  {isSharing ? "Enviando…" : "Sí, reenviar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingResend(false)}
+                  disabled={isSharing}
+                  className="rounded-lg px-2 py-1.5 text-[11.5px] font-semibold text-jaguar-ink/50 hover:bg-jaguar-ink/[0.05]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-xl bg-jaguar-green-50 px-3 py-2.5 text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-green-700">
+                <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                Enviada el {formatSentAt(callupSentAt)}
+                <button
+                  type="button"
+                  onClick={() => setConfirmingResend(true)}
+                  className="ml-1 flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-jaguar-ink/40 hover:bg-white hover:text-jaguar-ink/70"
+                  title="Reenviar convocatoria completa a todos"
+                >
+                  <RefreshCw className="h-3 w-3" strokeWidth={2} aria-hidden />
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={handleSave}
@@ -204,6 +270,17 @@ export function CallupList({
       <p className="mt-3 px-6 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/40">
         &ldquo;Convocatoria WhatsApp&rdquo; incluye un link de confirmación — cada convocado toca su nombre y confirma.
       </p>
+
+      {callupSentAt ? (
+        <p className="mx-6 mt-2.5 rounded-xl bg-jaguar-ink/[0.03] px-3.5 py-2.5 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/55">
+          Convocatoria cerrada. Marcar a un jugador nuevo aquí abajo y guardar lo agrega al plantel, pero para avisarle
+          por WhatsApp sin reenviarle a todo el grupo, ve a{" "}
+          <Link href={`/plataforma/mensajes?categoria=${category}`} className="font-semibold text-jaguar-green-700 hover:underline">
+            Mensajería → Reemplazo de convocatoria
+          </Link>
+          .
+        </p>
+      ) : null}
 
       {rsvpAbsences > 0 ? (
         <div className="mx-6 mt-3 flex items-start gap-2.5 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-3">

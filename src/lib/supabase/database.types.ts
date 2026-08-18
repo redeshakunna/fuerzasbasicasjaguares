@@ -580,6 +580,8 @@ export type Database = {
       matches: {
         Row: {
           academia_id: string | null
+          callup_sent_at: string | null
+          callup_sent_by: string | null
           category: string
           competition: string | null
           created_at: string
@@ -597,6 +599,8 @@ export type Database = {
         }
         Insert: {
           academia_id?: string | null
+          callup_sent_at?: string | null
+          callup_sent_by?: string | null
           category?: string
           competition?: string | null
           created_at?: string
@@ -614,6 +618,8 @@ export type Database = {
         }
         Update: {
           academia_id?: string | null
+          callup_sent_at?: string | null
+          callup_sent_by?: string | null
           category?: string
           competition?: string | null
           created_at?: string
@@ -635,6 +641,13 @@ export type Database = {
             columns: ["academia_id"]
             isOneToOne: false
             referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_callup_sent_by_fkey"
+            columns: ["callup_sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1420,26 +1433,6 @@ export type Database = {
           position_group: Database["public"]["Enums"]["position_group"]
         }[]
       }
-      rsvp_match_roster: {
-        Args: { p_match_id: string }
-        Returns: {
-          activity_date: string
-          activity_location: string
-          activity_time: string
-          activity_title: string
-          is_expired: boolean
-          player_first_name: string
-          player_id: string
-          player_nickname: string
-          player_photo_url: string
-          reason: string
-          response: string
-        }[]
-      }
-      rsvp_respond_by_match: {
-        Args: { p_match_id: string; p_player_id: string; p_reason?: string; p_response: string }
-        Returns: boolean
-      }
       rsvp_lookup: {
         Args: { p_token: string }
         Returns: {
@@ -1456,8 +1449,33 @@ export type Database = {
           player_photo_url: string
         }[]
       }
+      rsvp_match_roster: {
+        Args: { p_match_id: string }
+        Returns: {
+          activity_date: string
+          activity_location: string
+          activity_time: string
+          activity_title: string
+          is_expired: boolean
+          player_first_name: string
+          player_id: string
+          player_nickname: string
+          player_photo_url: string
+          reason: string
+          response: string
+        }[]
+      }
       rsvp_respond: {
         Args: { p_reason?: string; p_response: string; p_token: string }
+        Returns: boolean
+      }
+      rsvp_respond_by_match: {
+        Args: {
+          p_match_id: string
+          p_player_id: string
+          p_reason?: string
+          p_response: string
+        }
         Returns: boolean
       }
       set_player_performance_group: {

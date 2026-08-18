@@ -150,6 +150,53 @@ export async function getAbsenteeRecipients(category: string, sinceDays = 14): P
     .sort((a, b) => b.meta.localeCompare(a.meta));
 }
 
+/**
+ * Aviso general de fecha de corte — a TODOS los jugadores activos de la
+ * categoría (no solo a quien tenga una obligación vencida en `obligations`).
+ * Distinto de getDebtorRecipients(): ese avisa un monto puntual vencido;
+ * este es el aviso masivo de "llegó la fecha de corte del mes, ponte al día".
+ */
+export async function getCutoffNoticeRecipients(category: string): Promise<MessageRecipient[]> {
+  const supabase = await createClient();
+  const { data: players, error } = await supabase
+    .from("players")
+    .select("id, first_name, last_name, guardian_name, guardian_phone, phone, status")
+    .eq("category", category)
+    .order("first_name");
+  if (error) {
+    console.error("getCutoffNoticeRecipients() falló:", error);
+    return [];
+  }
+
+  return (players ?? [])
+    .filter((p) => p.status === "Disponible")
+    .map((player) => {
+      const playerName = `${player.first_name} ${player.last_name}`;
+      const guardianName = player.guardian_name || "Padre de familia";
+      const message = [
+        "*ACADEMIA JAGUARES DE CÓRDOBA*",
+        "*Fecha de corte del mes*",
+        "",
+        `Hola ${guardianName}, te escribimos de Jaguares de Córdoba.`,
+        "",
+        `Llegó la fecha de corte de este mes — te recordamos ponerte al día con la mensualidad de ${playerName} para evitar mora.`,
+        "",
+        "Si ya realizaste el pago, ignora este mensaje. Cualquier duda, escríbenos por este medio.",
+        "",
+        "¡Gracias por tu compromiso con Jaguares!",
+      ].join("\n");
+
+      return {
+        playerId: player.id,
+        playerName,
+        guardianName,
+        waPhone: toWhatsAppPhone(player.guardian_phone || player.phone),
+        message,
+        meta: guardianName,
+      };
+    });
+}
+
 /** Todos los jugadores activos de una categoría, listos para un mensaje libre. */
 export async function getActivePlayersForCategory(category: string): Promise<MessageRecipient[]> {
   const supabase = await createClient();

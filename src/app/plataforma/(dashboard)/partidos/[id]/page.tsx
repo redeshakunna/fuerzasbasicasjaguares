@@ -55,7 +55,7 @@ export default async function MatchDetailPage({ params }: MatchDetailPageProps) 
         {outcome !== "Programado" ? <Badge tone={outcomeBadgeTone[outcome]}>{outcome}</Badge> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_480px]">
+      <div className="space-y-6">
         <MatchDetailForm match={match} />
         <CallupList
           matchId={match.id}
@@ -63,6 +63,7 @@ export default async function MatchDetailPage({ params }: MatchDetailPageProps) 
           players={roster}
           initialCallups={callups}
           rsvpByPlayer={Object.fromEntries(rsvpByPlayerMap)}
+          initialCallupSentAt={match.callup_sent_at}
         />
       </div>
     </div>
