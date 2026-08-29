@@ -4,7 +4,6 @@ import { Card } from "../../ui/Card";
 import { StarRating } from "../../ui/StarRating";
 import { PerformanceGroupToggle } from "./PerformanceGroupToggle";
 import { PromotionToggle } from "./PromotionToggle";
-import { GenerateJerseyPhotoButton } from "./GenerateJerseyPhotoButton";
 import { getFullName } from "@/lib/data/players-stats";
 import { getPositionCoordinates } from "@/lib/data/player-profile-view";
 import { nextCategory as getNextCategory } from "@/lib/data/categories";
@@ -37,7 +36,6 @@ interface ProfileHeroProps {
   estadoGeneral: EstadoGeneral;
   canEditPerformanceGroup: boolean;
   canEditPromotion: boolean;
-  isAdmin: boolean;
 }
 
 export function ProfileHero({
@@ -47,13 +45,11 @@ export function ProfileHero({
   estadoGeneral,
   canEditPerformanceGroup,
   canEditPromotion,
-  isAdmin,
 }: ProfileHeroProps) {
   const circumference = 2 * Math.PI * 42;
   const progress = (estadoGeneral.score / 10) * circumference;
   const fullName = getFullName(player);
   const nextCategory = getNextCategory(player.category);
-  const displayPhotoUrl = player.jersey_photo_url || player.photo_url || "/brand/default-avatar.png";
 
   // La cancha del header va en horizontal (arco propio ↔ arco rival), así que
   // invertimos la profundidad (y) de la coordenada vertical que ya usa la
@@ -69,12 +65,11 @@ export function ProfileHero({
           <div className="flex flex-1 flex-col gap-5 sm:flex-row sm:items-start">
             <div className="flex shrink-0 items-start gap-3">
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-jaguar-mist ring-1 ring-jaguar-ink/8">
-                <Image src={displayPhotoUrl} alt={fullName} fill sizes="96px" className="object-cover" />
+                <Image src={player.photo_url || "/brand/default-avatar.png"} alt={fullName} fill sizes="96px" className="object-cover" />
                 <span
                   className={`absolute bottom-1.5 right-1.5 h-3.5 w-3.5 rounded-full ring-2 ring-white ${statusDotClass[player.status]}`}
                   title={player.status}
                 />
-                {isAdmin ? <GenerateJerseyPhotoButton player={player} /> : null}
               </div>
 
               <div

@@ -1053,7 +1053,6 @@ export type Database = {
           id: string
           image_authorization: boolean
           jersey_number: number | null
-          jersey_photo_url: string | null
           joined_at: string
           last_name: string
           last_training_at: string | null
@@ -1102,7 +1101,6 @@ export type Database = {
           id?: string
           image_authorization?: boolean
           jersey_number?: number | null
-          jersey_photo_url?: string | null
           joined_at?: string
           last_name: string
           last_training_at?: string | null
@@ -1151,7 +1149,6 @@ export type Database = {
           id?: string
           image_authorization?: boolean
           jersey_number?: number | null
-          jersey_photo_url?: string | null
           joined_at?: string
           last_name?: string
           last_training_at?: string | null

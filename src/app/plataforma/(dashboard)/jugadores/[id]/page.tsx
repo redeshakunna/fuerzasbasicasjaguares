@@ -90,7 +90,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
 
   const printInfo: PrintPlayerInfo = {
     fullName: getFullName(player),
-    photoUrl: player.jersey_photo_url || player.photo_url,
+    photoUrl: player.photo_url,
     position: player.position,
     category: player.category,
     age,
@@ -123,7 +123,6 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
         estadoGeneral={estadoGeneral}
         canEditPerformanceGroup={canEditPerformanceGroup}
         canEditPromotion={isAdmin}
-        isAdmin={isAdmin}
       />
 
       <ProfileTabs
