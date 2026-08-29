@@ -11,15 +11,22 @@
   --color-jaguar-ink: #0d1210;
 
   --color-jaguar-green-50: #eaf5ee;
+  --color-jaguar-green-400: #2e9450;
   --color-jaguar-green-500: #1f7a3d;
   --color-jaguar-green-600: #145c2c;
+  --color-jaguar-green-700: #114d25;
+  --color-jaguar-green-800: #0d3d1e;
   --color-jaguar-green-900: #0a2e17;
 
   --color-jaguar-turquoise-400: #3fd3d6;
   --color-jaguar-turquoise-500: #17b8bd;
+  --color-jaguar-turquoise-600: #128f93;
+  --color-jaguar-turquoise-700: #0d6f72;
 
+  --color-jaguar-maroon-400: #8b3145;
   --color-jaguar-maroon-500: #6e1b2b;
   --color-jaguar-maroon-600: #551320;
+  --color-jaguar-maroon-700: #3d0d16;
 
   --color-jaguar-gold-400: #f2c14e;
   --color-jaguar-gold-500: #e0a723;

@@ -27,27 +27,3 @@ export async function getMatchById(id: string): Promise<MatchRow | null> {
   }
   return data;
 }
-
-/**
- * Partidos próximos (fecha de hoy en adelante), en cualquier estado —
- * usados en el home público para el calendario informativo. Ordenados por
- * fecha/hora, el más próximo primero.
- */
-export async function getUpcomingMatches(limit = 20): Promise<MatchRow[]> {
-  const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from("matches")
-    .select("*")
-    .gte("match_date", today)
-    .order("match_date", { ascending: true })
-    .order("match_time", { ascending: true, nullsFirst: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("getUpcomingMatches() falló:", error);
-    return [];
-  }
-  return data ?? [];
-}

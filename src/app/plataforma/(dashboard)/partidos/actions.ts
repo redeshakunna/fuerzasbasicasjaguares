@@ -156,10 +156,6 @@ export async function saveCallups(matchId: string, records: CallupRecordInput[])
 export interface CallupWhatsAppResult {
   message?: string;
   error?: string;
-  /** Fecha/hora del primer envío (se mantiene igual en reenvíos) — null si nunca se ha enviado. */
-  callupSentAt?: string | null;
-  /** true si esta llamada fue el primer envío (recién se cerró la convocatoria). */
-  firstSend?: boolean;
 }
 
 /**
@@ -167,14 +163,8 @@ export interface CallupWhatsAppResult {
  * de cada convocado. Lee la convocatoria guardada directamente de la base (no del estado
  * del cliente, que puede estar desactualizado) y crea/reutiliza el token de cada jugador
  * de forma idempotente — volver a generar el mensaje no rompe links ya compartidos.
- *
- * La primera vez que se llama para un partido, además marca `callup_sent_at`/`callup_sent_by`
- * en `matches` — así la UI sabe que la convocatoria ya se "cerró" y puede bloquear el botón
- * masivo para evitar reenvíos accidentales a todo el plantel (ver CallupList). Llamadas
- * posteriores (reenvío intencional, confirmado aparte en la UI) arman el mensaje de nuevo
- * pero no tocan esa marca — se conserva la fecha del primer envío.
  */
-export async function sendCallupWhatsApp(matchId: string): Promise<CallupWhatsAppResult> {
+export async function buildCallupWhatsAppMessage(matchId: string): Promise<CallupWhatsAppResult> {
   const staff = await getCurrentStaffProfile();
   if (!staff) return { error: "Debes iniciar sesión." };
 
@@ -182,7 +172,7 @@ export async function sendCallupWhatsApp(matchId: string): Promise<CallupWhatsAp
 
   const { data: match, error: matchError } = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
   if (matchError || !match) {
-    console.error("sendCallupWhatsApp() no encontró el partido:", matchError);
+    console.error("buildCallupWhatsAppMessage() no encontró el partido:", matchError);
     return { error: "No se encontró el partido." };
   }
 
@@ -193,57 +183,39 @@ export async function sendCallupWhatsApp(matchId: string): Promise<CallupWhatsAp
     .eq("call_status", "Confirmado");
 
   if (callupsError) {
-    console.error("sendCallupWhatsApp() falló leyendo convocatoria:", callupsError);
+    console.error("buildCallupWhatsAppMessage() falló leyendo convocatoria:", callupsError);
     return { error: "No se pudo leer la convocatoria guardada." };
   }
 
   const playerIds = (callups ?? []).map((c) => c.player_id);
 
-  let message: string;
-
   if (playerIds.length === 0) {
-    message = buildMatchCallupMessage({ match, confirmedPlayers: [] });
-  } else {
-    const { data: players, error: playersError } = await supabase.from("players").select("*").in("id", playerIds);
-    if (playersError) {
-      console.error("sendCallupWhatsApp() falló leyendo jugadores:", playersError);
-      return { error: "No se pudo leer el plantel convocado." };
-    }
-
-    const expiresAt = computeRsvpExpiry(match.match_date, match.match_time);
-    const { error: upsertError } = await supabase.from("match_rsvp").upsert(
-      playerIds.map((playerId) => ({ match_id: matchId, player_id: playerId, expires_at: expiresAt })),
-      { onConflict: "match_id,player_id", ignoreDuplicates: true },
-    );
-    if (upsertError) {
-      console.error("sendCallupWhatsApp() falló creando entradas rsvp:", upsertError);
-    }
-
-    // Un solo link para toda la convocatoria — el jugador elige su nombre ahí en vez de
-    // recibir un link personal (más fácil de compartir un solo link que veinte).
-    const siteUrl = await getSiteUrl();
-    const rsvpLink = `${siteUrl}/confirmar/partido/${matchId}`;
-    const confirmedPlayers = sortRosterForCallup(players ?? []);
-    message = buildMatchCallupMessage({ match, confirmedPlayers, rsvpLink });
+    return { message: buildMatchCallupMessage({ match, confirmedPlayers: [] }) };
   }
 
-  let callupSentAt = match.callup_sent_at;
-  const firstSend = !callupSentAt;
-
-  if (firstSend) {
-    callupSentAt = new Date().toISOString();
-    const { error: markError } = await supabase
-      .from("matches")
-      .update({ callup_sent_at: callupSentAt, callup_sent_by: staff.id })
-      .eq("id", matchId);
-    if (markError) {
-      console.error("sendCallupWhatsApp() falló marcando el envío:", markError);
-      // No bloqueamos el envío del mensaje por esto — el WhatsApp ya se puede mandar igual.
-    }
+  const { data: players, error: playersError } = await supabase.from("players").select("*").in("id", playerIds);
+  if (playersError) {
+    console.error("buildCallupWhatsAppMessage() falló leyendo jugadores:", playersError);
+    return { error: "No se pudo leer el plantel convocado." };
   }
 
-  revalidatePath(`/plataforma/partidos/${matchId}`);
-  return { message, callupSentAt, firstSend };
+  const expiresAt = computeRsvpExpiry(match.match_date, match.match_time);
+  const { error: upsertError } = await supabase.from("match_rsvp").upsert(
+    playerIds.map((playerId) => ({ match_id: matchId, player_id: playerId, expires_at: expiresAt })),
+    { onConflict: "match_id,player_id", ignoreDuplicates: true },
+  );
+  if (upsertError) {
+    console.error("buildCallupWhatsAppMessage() falló creando entradas rsvp:", upsertError);
+  }
+
+  // Un solo link para toda la convocatoria — el jugador elige su nombre ahí en vez de
+  // recibir un link personal (más fácil de compartir un solo link que veinte).
+  const siteUrl = await getSiteUrl();
+  const rsvpLink = `${siteUrl}/confirmar/partido/${matchId}`;
+
+  const confirmedPlayers = sortRosterForCallup(players ?? []);
+  const message = buildMatchCallupMessage({ match, confirmedPlayers, rsvpLink });
+  return { message };
 }
 
 /** Server Action — registra el resultado final de un partido (marcador + competencia), opcional y no bloqueante. */

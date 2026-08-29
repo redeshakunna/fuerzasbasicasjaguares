@@ -74,16 +74,16 @@ export function HeroContent({ slide }: HeroContentProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -18 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-md"
+          className="w-full max-w-lg"
         >
           {slide.eyebrow ? (
-            <span className="mb-4 inline-block text-[12px] font-semibold uppercase tracking-[0.28em] text-jaguar-green-600">
+            <span className="mb-5 inline-block text-[13px] font-semibold uppercase tracking-[0.28em] text-jaguar-green-600">
               {slide.eyebrow}
             </span>
           ) : null}
 
           {slide.title ? (
-            <h1 className="font-display text-5xl font-normal uppercase leading-[0.92] tracking-tight text-jaguar-ink lg:text-6xl xl:text-7xl">
+            <h1 className="font-display text-6xl font-normal uppercase leading-[0.9] tracking-tight text-jaguar-ink lg:text-7xl xl:text-8xl">
               <span className="block">{slide.title.lead}</span>
               <span
                 className={`block bg-gradient-to-r bg-clip-text text-transparent ${titleAccentClass[slide.accent]}`}
@@ -94,13 +94,13 @@ export function HeroContent({ slide }: HeroContentProps) {
           ) : null}
 
           {slide.description ? (
-            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-jaguar-ink/70 lg:text-base">
+            <p className="mt-6 max-w-md text-base leading-relaxed text-jaguar-ink/70 lg:text-lg">
               {slide.description}
             </p>
           ) : null}
 
           {slide.ctas?.length ? (
-            <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="mt-10 flex flex-wrap items-center gap-4">
               {slide.ctas.map((cta) => (
                 <Link
                   key={cta.label}

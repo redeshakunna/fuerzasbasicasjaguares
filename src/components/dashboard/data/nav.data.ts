@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Users, Dumbbell, Trophy, ClipboardList, ClipboardCheck, FileBarChart2, MessageCircle, Wallet, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Trophy, ClipboardList, ClipboardCheck, FileBarChart2, Wallet, Settings } from "lucide-react";
 
 export interface DashboardNavChild {
   id: string;
@@ -36,7 +36,6 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { id: "evaluaciones", label: "Evaluaciones", href: "/plataforma/evaluaciones", icon: ClipboardList },
   { id: "asistencia", label: "Asistencia", href: "/plataforma/asistencia", icon: ClipboardCheck },
   { id: "informes", label: "Informes", href: "/plataforma/informes", icon: FileBarChart2 },
-  { id: "mensajes", label: "Mensajería", href: "/plataforma/mensajes", icon: MessageCircle },
   {
     id: "finanzas",
     label: "Gestión Financiera",

@@ -43,29 +43,10 @@ function initialsOf(fullName: string): string {
  * siguiendo el mismo patrón ya usado en match-callups.ts para evitar la
  * fragilidad de tipos de los selects anidados de supabase-js.
  */
-export async function getObligations(category?: string): Promise<ObligationRow[]> {
+export async function getObligations(): Promise<ObligationRow[]> {
   const supabase = await createClient();
 
-  let query = supabase.from("obligations").select("*").order("issued_date");
-
-  // Filtra por categoría a través de players.category — obligations no tiene
-  // columna de categoría propia (un cobro pertenece al jugador, no al club
-  // entero), así que primero resolvemos qué jugadores son de esa categoría.
-  if (category) {
-    const { data: categoryPlayers, error: playersError } = await supabase
-      .from("players")
-      .select("id")
-      .eq("category", category);
-    if (playersError) {
-      console.error("getObligations() falló leyendo jugadores de la categoría:", playersError);
-      return [];
-    }
-    const categoryPlayerIds = (categoryPlayers ?? []).map((p) => p.id);
-    if (categoryPlayerIds.length === 0) return [];
-    query = query.in("player_id", categoryPlayerIds);
-  }
-
-  const { data: obligations, error } = await query;
+  const { data: obligations, error } = await supabase.from("obligations").select("*").order("issued_date");
   if (error) {
     console.error("getObligations() falló:", error);
     return [];
@@ -134,8 +115,8 @@ export interface FinanceSummary {
   vencidosAmount: number;
 }
 
-export async function getFinanceSummary(category?: string): Promise<FinanceSummary> {
-  const obligations = await getObligations(category);
+export async function getFinanceSummary(): Promise<FinanceSummary> {
+  const obligations = await getObligations();
   const pending = obligations.filter((o) => o.status !== "Pagado");
   const paid = obligations.filter((o) => o.status === "Pagado");
   const overdue = obligations.filter((o) => o.status === "Vencido");
@@ -148,8 +129,8 @@ export async function getFinanceSummary(category?: string): Promise<FinanceSumma
   };
 }
 
-export async function getPaymentMethodBreakdown(category?: string): Promise<{ method: string; amount: number; pct: number }[]> {
-  const obligations = await getObligations(category);
+export async function getPaymentMethodBreakdown(): Promise<{ method: string; amount: number; pct: number }[]> {
+  const obligations = await getObligations();
   const paid = obligations.filter((o) => o.status === "Pagado" && o.paymentMethod);
   const total = paid.reduce((sum, o) => sum + o.amount, 0);
   const byMethod = new Map<string, number>();

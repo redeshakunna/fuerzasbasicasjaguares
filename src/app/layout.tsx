@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Anton, Manrope } from "next/font/google";
+import { PublicChatWidget } from "@/components/layout/PublicChatWidget";
 import "./globals.css";
 
 /**
@@ -37,7 +38,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${anton.variable} ${manrope.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PublicChatWidget />
+      </body>
     </html>
   );
 }

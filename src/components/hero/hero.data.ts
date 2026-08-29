@@ -65,7 +65,7 @@ export const navLinks: NavLink[] = [
     ],
   },
   { label: "Entrenadores", href: "/entrenadores" },
-  { label: "Noticias", href: "/noticias" },
+  { label: "Noticias", href: "#noticias" },
   { label: "Galería", href: "/galeria" },
   { label: "Inscripciones", href: "/inscripciones" },
   { label: "Contacto", href: "/contacto" },

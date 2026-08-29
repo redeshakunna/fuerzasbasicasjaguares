@@ -3,6 +3,7 @@ import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { OnboardingWelcome } from "@/components/dashboard/OnboardingWelcome";
 import { TourProvider } from "@/components/dashboard/tour/TourContext";
+import { ChatPanel } from "@/components/dashboard/chat/ChatPanel";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 
 /**
@@ -23,6 +24,7 @@ export default async function DashboardGroupLayout({ children }: { children: Rea
           <main className="mx-auto max-w-[1600px] px-5 pb-24 pt-6 lg:px-8 lg:pb-8">{children}</main>
         </div>
         <MobileNav />
+        <ChatPanel />
         {showOnboarding && staff ? (
           <OnboardingWelcome fullName={staff.fullName} role={staff.role as Exclude<typeof staff.role, "padre">} />
         ) : null}
