@@ -5,6 +5,7 @@ import { OnboardingWelcome } from "@/components/dashboard/OnboardingWelcome";
 import { TourProvider } from "@/components/dashboard/tour/TourContext";
 import { ChatPanel } from "@/components/dashboard/chat/ChatPanel";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
+import { getPendingRegistrationRequestsCount } from "@/lib/data/registration-requests";
 
 /**
  * Shell de la plataforma interna (sidebar + header). Vive en el grupo de
@@ -14,11 +15,12 @@ import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 export default async function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
   const staff = await getCurrentStaffProfile();
   const showOnboarding = !!staff && staff.role !== "padre" && !staff.onboardedAt;
+  const pendingRegistrationsCount = await getPendingRegistrationRequestsCount();
 
   return (
     <TourProvider>
       <div className="min-h-screen bg-gradient-to-b from-jaguar-green-50/80 via-jaguar-mist to-jaguar-mist">
-        <Sidebar />
+        <Sidebar pendingRegistrationsCount={pendingRegistrationsCount} />
         <div className="lg:pl-64">
           <Header />
           <main className="mx-auto max-w-[1600px] px-5 pb-24 pt-6 lg:px-8 lg:pb-8">{children}</main>

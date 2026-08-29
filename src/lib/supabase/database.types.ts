@@ -892,6 +892,153 @@ export type Database = {
           },
         ]
       }
+      player_registration_requests: {
+        Row: {
+          address: string | null
+          allergies: string | null
+          birth_date: string
+          birth_place: string | null
+          blood_type: string | null
+          category: string
+          created_player_id: string | null
+          document_number: string | null
+          document_type: string | null
+          dominant_foot: Database["public"]["Enums"]["dominant_foot"] | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          eps_name: string | null
+          first_name: string
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          guardian_relationship: string | null
+          height_cm: number | null
+          id: string
+          image_authorization: boolean
+          last_name: string
+          medical_authorization: boolean
+          medical_conditions: string | null
+          nickname: string | null
+          phone: string | null
+          photo_url: string | null
+          position: string
+          position_group: Database["public"]["Enums"]["position_group"]
+          previous_club: string | null
+          request_status: string
+          requested_jersey_number: number | null
+          residence_place: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          school_grade: string | null
+          school_name: string | null
+          submitted_at: string
+          weight_kg: number | null
+          years_playing: number | null
+        }
+        Insert: {
+          address?: string | null
+          allergies?: string | null
+          birth_date: string
+          birth_place?: string | null
+          blood_type?: string | null
+          category?: string
+          created_player_id?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          dominant_foot?: Database["public"]["Enums"]["dominant_foot"] | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          eps_name?: string | null
+          first_name: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          height_cm?: number | null
+          id?: string
+          image_authorization?: boolean
+          last_name: string
+          medical_authorization?: boolean
+          medical_conditions?: string | null
+          nickname?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position: string
+          position_group: Database["public"]["Enums"]["position_group"]
+          previous_club?: string | null
+          request_status?: string
+          requested_jersey_number?: number | null
+          residence_place?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_grade?: string | null
+          school_name?: string | null
+          submitted_at?: string
+          weight_kg?: number | null
+          years_playing?: number | null
+        }
+        Update: {
+          address?: string | null
+          allergies?: string | null
+          birth_date?: string
+          birth_place?: string | null
+          blood_type?: string | null
+          category?: string
+          created_player_id?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          dominant_foot?: Database["public"]["Enums"]["dominant_foot"] | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          eps_name?: string | null
+          first_name?: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          height_cm?: number | null
+          id?: string
+          image_authorization?: boolean
+          last_name?: string
+          medical_authorization?: boolean
+          medical_conditions?: string | null
+          nickname?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position?: string
+          position_group?: Database["public"]["Enums"]["position_group"]
+          previous_club?: string | null
+          request_status?: string
+          requested_jersey_number?: number | null
+          residence_place?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_grade?: string | null
+          school_name?: string | null
+          submitted_at?: string
+          weight_kg?: number | null
+          years_playing?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_registration_requests_created_player_id_fkey"
+            columns: ["created_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_registration_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_reports: {
         Row: {
           academia_id: string | null
@@ -1432,6 +1579,10 @@ export type Database = {
           position: string
           position_group: Database["public"]["Enums"]["position_group"]
         }[]
+      }
+      get_taken_jersey_numbers_sub15: {
+        Args: never
+        Returns: number[]
       }
       rsvp_lookup: {
         Args: { p_token: string }

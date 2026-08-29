@@ -29,6 +29,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
       { id: "categoria-sub13", label: "Sub-13", href: "/plataforma/jugadores?categoria=Sub-13", badge: "Próximamente" },
       { id: "categoria-sub15", label: "Sub-15", href: "/plataforma/jugadores?categoria=Sub-15" },
       { id: "categoria-sub17", label: "Sub-17", href: "/plataforma/jugadores?categoria=Sub-17", badge: "Próximamente" },
+      { id: "jugadores-solicitudes", label: "Solicitudes de inscripción", href: "/plataforma/jugadores/solicitudes" },
     ],
   },
   { id: "entrenamientos", label: "Entrenamientos", href: "/plataforma/entrenamientos", icon: Dumbbell },

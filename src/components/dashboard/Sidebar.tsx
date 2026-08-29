@@ -14,13 +14,18 @@ function isNavHrefActive(href: string, pathname: string, currentCategoria: strin
   return categoria === null || categoria === currentCategoria;
 }
 
+interface SidebarProps {
+  /** Solicitudes de inscripción pendientes — se muestra como badge sobre "Solicitudes de inscripción". */
+  pendingRegistrationsCount?: number;
+}
+
 /**
  * Sidebar izquierda fija. Item activo con fondo verde sólido (sin
  * degradados), hover sutil, íconos minimalistas (lucide, stroke 1.75).
  * Cierra con una tarjeta de propósito institucional (marca de agua del
  * jaguar) antes del link de regreso al sitio público.
  */
-export function Sidebar() {
+export function Sidebar({ pendingRegistrationsCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategoria = searchParams.get("categoria");
@@ -73,6 +78,10 @@ export function Sidebar() {
                 <div className="mt-1 space-y-0.5 border-l border-white/10 pl-3.5">
                   {item.children?.map((child) => {
                     const childActive = isNavHrefActive(child.href, pathname, currentCategoria);
+                    const pendingBadge =
+                      child.id === "jugadores-solicitudes" && pendingRegistrationsCount > 0
+                        ? String(pendingRegistrationsCount)
+                        : null;
                     return (
                       <Link
                         key={child.id}
@@ -84,7 +93,11 @@ export function Sidebar() {
                         }`}
                       >
                         {child.label}
-                        {child.badge ? (
+                        {pendingBadge ? (
+                          <span className="rounded-full bg-jaguar-gold-500 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold text-jaguar-ink">
+                            {pendingBadge}
+                          </span>
+                        ) : child.badge ? (
                           <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.03em] text-white/50">
                             {child.badge}
                           </span>

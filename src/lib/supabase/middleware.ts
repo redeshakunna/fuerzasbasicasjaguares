@@ -34,9 +34,11 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isLoginRoute = pathname === "/plataforma/login";
+  // Link público e independiente — un jugador/acudiente de Sub-15 lo llena sin sesión.
+  const isPublicRegistrationRoute = pathname.startsWith("/plataforma/registrojugadores");
   const isPlataformaRoute = pathname.startsWith("/plataforma");
 
-  if (isPlataformaRoute && !isLoginRoute && !user) {
+  if (isPlataformaRoute && !isLoginRoute && !isPublicRegistrationRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/plataforma/login";
     url.searchParams.set("next", pathname);
