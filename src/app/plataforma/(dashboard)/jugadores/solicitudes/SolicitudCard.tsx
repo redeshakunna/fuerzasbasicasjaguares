@@ -37,6 +37,7 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
   const [jerseyValue, setJerseyValue] = useState(
     request.requested_jersey_number ? String(request.requested_jersey_number) : ""
   );
+  const [performanceGroup, setPerformanceGroup] = useState<"A" | "B" | "">("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
@@ -47,9 +48,13 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
 
   function onApprove() {
     setError(null);
+    if (!performanceGroup) {
+      setError("Selecciona el grupo de desempeño (A o B) del jugador.");
+      return;
+    }
     startTransition(async () => {
       const jerseyNumber = jerseyValue ? Number(jerseyValue) : null;
-      const result = await approveRegistrationRequest(request.id, jerseyNumber);
+      const result = await approveRegistrationRequest(request.id, jerseyNumber, performanceGroup);
       if (result.error) {
         setError(result.error);
         return;
@@ -186,22 +191,47 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
                 </div>
               ) : mode === "approve" ? (
                 <div className="space-y-2.5">
-                  <label className="block text-[12.5px] font-semibold text-jaguar-ink/70">
-                    Número de camiseta definitivo
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={jerseyValue}
-                    onChange={(e) => setJerseyValue(e.target.value)}
-                    placeholder="Ej. 10 (opcional)"
-                    className="w-40 rounded-xl border border-jaguar-ink/10 bg-jaguar-mist/40 px-3 py-2 text-[13.5px] text-jaguar-ink focus:border-jaguar-green-500/40 focus:outline-none focus:ring-2 focus:ring-jaguar-green-500/10"
-                  />
+                  <div className="flex flex-wrap gap-4">
+                    <div>
+                      <label className="block text-[12.5px] font-semibold text-jaguar-ink/70">
+                        Grupo de desempeño *
+                      </label>
+                      <div className="mt-1.5 flex gap-1.5">
+                        {(["A", "B"] as const).map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setPerformanceGroup(g)}
+                            className={`h-9 w-9 rounded-xl text-[13.5px] font-bold transition-colors ${
+                              performanceGroup === g
+                                ? "bg-jaguar-green-600 text-white"
+                                : "bg-jaguar-mist/60 text-jaguar-ink/60 hover:bg-jaguar-ink/[0.06]"
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12.5px] font-semibold text-jaguar-ink/70">
+                        Número de camiseta definitivo
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={jerseyValue}
+                        onChange={(e) => setJerseyValue(e.target.value)}
+                        placeholder="Ej. 10 (opcional)"
+                        className="mt-1.5 w-40 rounded-xl border border-jaguar-ink/10 bg-jaguar-mist/40 px-3 py-2 text-[13.5px] text-jaguar-ink focus:border-jaguar-green-500/40 focus:outline-none focus:ring-2 focus:ring-jaguar-green-500/10"
+                      />
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={isPending}
+                      disabled={isPending || !performanceGroup}
                       onClick={onApprove}
                       className="flex items-center gap-1.5 rounded-xl bg-jaguar-green-600 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-jaguar-green-700 disabled:opacity-60"
                     >

@@ -26,14 +26,22 @@ async function requireReviewer() {
  * El técnico/coordinador/admin puede confirmar o ajustar el número de
  * camiseta que el jugador sugirió antes de crear el registro definitivo
  * (por eso `finalJerseyNumber` es un parámetro aparte, no el de la solicitud).
+ * También debe elegir a qué grupo de desempeño de Sub-15 (A o B) entra el
+ * jugador — la solicitud pública no lo pregunta, es una decisión del cuerpo
+ * técnico.
  */
 export async function approveRegistrationRequest(
   requestId: string,
-  finalJerseyNumber: number | null
+  finalJerseyNumber: number | null,
+  performanceGroup: "A" | "B"
 ): Promise<ReviewRequestState> {
   const staff = await requireReviewer();
   if (!staff) {
     return { error: "Solo el técnico, el coordinador o el admin pueden aprobar solicitudes." };
+  }
+
+  if (performanceGroup !== "A" && performanceGroup !== "B") {
+    return { error: "Selecciona el grupo de desempeño (A o B) antes de aprobar." };
   }
 
   const supabase = await createClient();
@@ -63,6 +71,7 @@ export async function approveRegistrationRequest(
       position: request.position,
       position_group: request.position_group,
       category: request.category,
+      performance_group: performanceGroup,
       photo_url: request.photo_url,
       height_cm: request.height_cm,
       weight_kg: request.weight_kg,
