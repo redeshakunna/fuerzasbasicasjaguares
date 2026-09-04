@@ -27,7 +27,7 @@ function NextMatchCard() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="flex h-full flex-col rounded-3xl border border-jaguar-ink/5 bg-jaguar-white p-7 shadow-[0_20px_60px_-35px_rgba(13,18,16,0.25)] md:p-8"
+      className="flex h-full min-w-0 flex-col rounded-3xl border border-jaguar-ink/5 bg-jaguar-white p-7 shadow-[0_20px_60px_-35px_rgba(13,18,16,0.25)] md:p-8"
     >
       <SectionHeading>Próximo partido</SectionHeading>
 
@@ -133,7 +133,7 @@ function NewsCarousel() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-      className="flex h-full flex-col rounded-3xl border border-jaguar-ink/5 bg-jaguar-white p-7 shadow-[0_20px_60px_-35px_rgba(13,18,16,0.25)] md:p-8"
+      className="flex h-full min-w-0 flex-col rounded-3xl border border-jaguar-ink/5 bg-jaguar-white p-7 shadow-[0_20px_60px_-35px_rgba(13,18,16,0.25)] md:p-8"
     >
       <div className="flex items-center justify-between">
         <SectionHeading>Noticias destacadas</SectionHeading>
@@ -150,7 +150,7 @@ function NewsCarousel() {
         </Link>
       </div>
 
-      <div className="relative mt-7 flex flex-1 items-center gap-3">
+      <div className="relative mt-7 flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
           aria-label="Noticia anterior"
@@ -162,7 +162,7 @@ function NewsCarousel() {
 
         <div
           ref={trackRef}
-          className="flex flex-1 snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex min-w-0 flex-1 snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {newsItems.map((item) => (
             <NewsCard key={item.id} item={item} />
@@ -192,7 +192,7 @@ function NewsCarousel() {
 export function MatchAndNewsSection() {
   return (
     <section id="proximo-partido" className="bg-jaguar-mist/40 px-4 py-16 md:px-8 md:py-20 lg:px-12">
-      <div id="noticias" className="mx-auto grid max-w-[1600px] gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+      <div id="noticias" className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
         <NextMatchCard />
         <NewsCarousel />
       </div>
