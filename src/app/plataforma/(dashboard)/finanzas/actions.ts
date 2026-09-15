@@ -108,6 +108,133 @@ export async function crearObligacion(input: {
   return { success: true, obligationId: data.id };
 }
 
+export interface ConceptInput {
+  name: string;
+  description: string;
+  suggestedAmount: number;
+  isRecurring: boolean;
+}
+
+/** Crea un concepto de cobro nuevo en el catálogo de la academia. */
+export async function crearConcepto(input: ConceptInput): Promise<FinanceActionState & { conceptId?: string }> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para crear un concepto." };
+
+  const name = input.name.trim();
+  if (!name) return { error: "El concepto necesita un nombre." };
+  if (input.suggestedAmount < 0) return { error: "El valor sugerido no puede ser negativo." };
+
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return { error: "No se encontró la academia activa." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payment_concepts")
+    .insert({
+      academia_id: academiaId,
+      name,
+      description: input.description.trim() || null,
+      suggested_amount: input.suggestedAmount,
+      is_recurring: input.isRecurring,
+      status: "Activo",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("crearConcepto() falló:", error);
+    return { error: "No se pudo crear el concepto. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/conceptos");
+  revalidatePath("/plataforma/finanzas/configuracion");
+  return { success: true, conceptId: data.id };
+}
+
+/** Edita un concepto existente (nombre, descripción, valor sugerido, recurrencia). */
+export async function actualizarConcepto(conceptId: string, input: ConceptInput): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para editar un concepto." };
+
+  const name = input.name.trim();
+  if (!name) return { error: "El concepto necesita un nombre." };
+  if (input.suggestedAmount < 0) return { error: "El valor sugerido no puede ser negativo." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("payment_concepts")
+    .update({
+      name,
+      description: input.description.trim() || null,
+      suggested_amount: input.suggestedAmount,
+      is_recurring: input.isRecurring,
+    })
+    .eq("id", conceptId);
+
+  if (error) {
+    console.error("actualizarConcepto() falló:", error);
+    return { error: "No se pudo guardar el concepto. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/conceptos");
+  revalidatePath("/plataforma/finanzas/configuracion");
+  return { success: true };
+}
+
+/** Activa/inactiva un concepto — alternativa segura a borrar cuando ya tiene cobros asociados. */
+export async function alternarEstadoConcepto(conceptId: string, activo: boolean): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para cambiar el estado del concepto." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("payment_concepts")
+    .update({ status: activo ? "Activo" : "Inactivo" })
+    .eq("id", conceptId);
+
+  if (error) {
+    console.error("alternarEstadoConcepto() falló:", error);
+    return { error: "No se pudo cambiar el estado. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/conceptos");
+  revalidatePath("/plataforma/finanzas/configuracion");
+  return { success: true };
+}
+
+/**
+ * Elimina un concepto del catálogo. Si ya tiene cobros (obligations) creados
+ * con ese concepto, el borrado se bloquea en la base de datos (integridad
+ * referencial) — en ese caso se devuelve un error claro sugiriendo inactivarlo
+ * en su lugar, en vez de dejar pasar un error de Postgres sin traducir.
+ */
+export async function eliminarConcepto(conceptId: string): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para eliminar un concepto." };
+
+  const supabase = await createClient();
+
+  const { count } = await supabase
+    .from("obligations")
+    .select("id", { count: "exact", head: true })
+    .eq("concept_id", conceptId);
+
+  if (count && count > 0) {
+    return { error: "Este concepto ya tiene cobros asociados — no se puede eliminar. Puedes inactivarlo en su lugar." };
+  }
+
+  const { error } = await supabase.from("payment_concepts").delete().eq("id", conceptId);
+
+  if (error) {
+    console.error("eliminarConcepto() falló:", error);
+    return { error: "No se pudo eliminar el concepto. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/conceptos");
+  revalidatePath("/plataforma/finanzas/configuracion");
+  return { success: true };
+}
+
 /**
  * Marca recordatorios como enviados (acción masiva) sobre un lote de
  * obligaciones pendientes/vencidas. Registra reminder_sent_at en la fila real
