@@ -36,9 +36,14 @@ export async function updateSession(request: NextRequest) {
   const isLoginRoute = pathname === "/plataforma/login";
   // Link público e independiente — un jugador/acudiente de Sub-15 lo llena sin sesión.
   const isPublicRegistrationRoute = pathname.startsWith("/plataforma/registrojugadores");
+  // Recuperación de contraseña — se accede sin sesión (solicitar link) o con una
+  // sesión de recuperación temporal establecida del lado del cliente vía el link
+  // del correo (el hash #access_token nunca llega al servidor).
+  const isPasswordRecoveryRoute =
+    pathname.startsWith("/plataforma/recuperar") || pathname.startsWith("/plataforma/restablecer");
   const isPlataformaRoute = pathname.startsWith("/plataforma");
 
-  if (isPlataformaRoute && !isLoginRoute && !isPublicRegistrationRoute && !user) {
+  if (isPlataformaRoute && !isLoginRoute && !isPublicRegistrationRoute && !isPasswordRecoveryRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/plataforma/login";
     url.searchParams.set("next", pathname);
