@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Loader2, User } from "lucide-react";
 import { submitPlayerRegistration, type SubmitRegistrationState } from "./actions";
@@ -52,11 +52,21 @@ export function RegistrationWizard() {
   const birthDateRef = useRef<HTMLInputElement>(null);
   const positionRef = useRef<HTMLSelectElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
   const takenJerseyNumbers = useTakenJerseyNumbersPublic();
   const jerseyNumber = jerseyValue ? Number(jerseyValue) : null;
   const isJerseyTaken = jerseyNumber !== null && takenJerseyNumbers.has(jerseyNumber);
   const ageWarning = getCategoryAgeWarning(birthDateValue, CATEGORY);
+
+  // Si aparece un error (de paso o del servidor) y no está a la vista, lo llevamos
+  // a pantalla — así nunca "parece que no pasa nada" cuando en realidad hay un
+  // mensaje esperando más abajo o más arriba de donde está el usuario.
+  useEffect(() => {
+    if (stepError || state.error) {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [stepError, state.error]);
 
   function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -437,6 +447,7 @@ export function RegistrationWizard() {
                 name="medical_authorization"
                 type="checkbox"
                 value="true"
+                required
                 checked={medicalAuth}
                 onChange={(e) => setMedicalAuth(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
@@ -448,6 +459,7 @@ export function RegistrationWizard() {
                 name="image_authorization"
                 type="checkbox"
                 value="true"
+                required
                 checked={imageAuth}
                 onChange={(e) => setImageAuth(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
@@ -458,12 +470,18 @@ export function RegistrationWizard() {
         </div>
 
         {stepError ? (
-          <p className="mt-4 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-2.5 text-[13px] lg:text-[14px] font-medium text-jaguar-maroon-600">
+          <p
+            ref={errorRef}
+            className="mt-4 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-2.5 text-[13px] lg:text-[14px] font-medium text-jaguar-maroon-600"
+          >
             {stepError}
           </p>
         ) : null}
         {state.error ? (
-          <p className="mt-4 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-2.5 text-[13px] lg:text-[14px] font-medium text-jaguar-maroon-600">
+          <p
+            ref={errorRef}
+            className="mt-4 rounded-xl bg-jaguar-maroon-500/8 px-3.5 py-2.5 text-[13px] lg:text-[14px] font-medium text-jaguar-maroon-600"
+          >
             {state.error}
           </p>
         ) : null}

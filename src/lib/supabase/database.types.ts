@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_finance_settings: {
+        Row: {
+          academia_id: string
+          created_at: string
+          due_day: number
+          enabled_payment_methods: string[]
+          id: string
+          reminder_days_before: number
+          updated_at: string
+        }
+        Insert: {
+          academia_id: string
+          created_at?: string
+          due_day?: number
+          enabled_payment_methods?: string[]
+          id?: string
+          reminder_days_before?: number
+          updated_at?: string
+        }
+        Update: {
+          academia_id?: string
+          created_at?: string
+          due_day?: number
+          enabled_payment_methods?: string[]
+          id?: string
+          reminder_days_before?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_finance_settings_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: true
+            referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academias: {
         Row: {
           created_at: string
@@ -165,6 +203,41 @@ export type Database = {
             columns: ["training_id"]
             isOneToOne: false
             referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_fees: {
+        Row: {
+          academia_id: string
+          category: string
+          created_at: string
+          id: string
+          monthly_amount: number
+          updated_at: string
+        }
+        Insert: {
+          academia_id: string
+          category: string
+          created_at?: string
+          id?: string
+          monthly_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          academia_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_fees_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: false
+            referencedRelation: "academias"
             referencedColumns: ["id"]
           },
         ]

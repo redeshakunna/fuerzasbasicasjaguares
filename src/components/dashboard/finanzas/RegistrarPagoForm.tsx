@@ -6,15 +6,15 @@ import { Banknote, Check, CreditCard, Landmark, Smartphone } from "lucide-react"
 import { Card } from "../ui/Card";
 import { Avatar } from "../ui/Avatar";
 import { registrarPago } from "@/app/plataforma/(dashboard)/finanzas/actions";
-import type { ObligationRow } from "@/lib/data/finance";
+import { ALL_PAYMENT_METHODS, type ObligationRow, type PaymentMethod } from "@/lib/data/finance";
 import { formatCOP } from "@/lib/finance/format";
 
-const methods = [
-  { id: "Efectivo", icon: Banknote },
-  { id: "Transferencia", icon: Landmark },
-  { id: "Nequi / Daviplata", icon: Smartphone },
-  { id: "Tarjeta", icon: CreditCard },
-] as const;
+const methodIcons: Record<PaymentMethod, typeof Banknote> = {
+  Efectivo: Banknote,
+  Transferencia: Landmark,
+  "Nequi / Daviplata": Smartphone,
+  Tarjeta: CreditCard,
+};
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -24,17 +24,20 @@ function todayISO() {
 export function RegistrarPagoForm({
   pendingObligations,
   initialObligationId,
+  enabledMethods,
 }: {
   pendingObligations: ObligationRow[];
   initialObligationId?: string;
+  enabledMethods?: PaymentMethod[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const initial = pendingObligations.find((o) => o.id === initialObligationId) ?? pendingObligations[0] ?? null;
+  const methods = enabledMethods && enabledMethods.length > 0 ? enabledMethods : ALL_PAYMENT_METHODS;
 
   const [selected, setSelected] = useState<ObligationRow | null>(initial);
   const [amount, setAmount] = useState(String(initial?.amount ?? ""));
-  const [method, setMethod] = useState<(typeof methods)[number]["id"]>("Efectivo");
+  const [method, setMethod] = useState<PaymentMethod>(methods[0]);
   const [paidDate, setPaidDate] = useState(todayISO());
   const [error, setError] = useState<string | null>(null);
 
@@ -110,19 +113,19 @@ export function RegistrarPagoForm({
         <span className="text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink/60">Método de pago</span>
         <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {methods.map((m) => {
-            const Icon = m.icon;
-            const active = method === m.id;
+            const Icon = methodIcons[m];
+            const active = method === m;
             return (
               <button
-                key={m.id}
+                key={m}
                 type="button"
-                onClick={() => setMethod(m.id)}
+                onClick={() => setMethod(m)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-[11.5px] lg:text-[12.5px] font-semibold transition-colors ${
                   active ? "border-jaguar-green-600 bg-jaguar-green-50/50 text-jaguar-green-700" : "border-jaguar-ink/8 text-jaguar-ink/60 hover:bg-jaguar-mist/40"
                 }`}
               >
                 <Icon className="h-4.5 w-4.5" strokeWidth={1.9} aria-hidden />
-                {m.id}
+                {m}
               </button>
             );
           })}

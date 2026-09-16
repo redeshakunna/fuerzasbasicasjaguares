@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
+import { categories, type Category } from "@/lib/data/categories";
+
+/** Catálogo fijo de métodos de pago que la plataforma sabe manejar (Registrar pago, Configuración). */
+export const ALL_PAYMENT_METHODS = ["Efectivo", "Transferencia", "Nequi / Daviplata", "Tarjeta"] as const;
+export type PaymentMethod = (typeof ALL_PAYMENT_METHODS)[number];
 
 export type ObligationStatus = "Pendiente" | "Pagado" | "Vencido" | "Parcial";
 
@@ -179,6 +184,73 @@ export async function getDefaultAcademiaId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
+export interface FinanceSettingsRow {
+  id: string;
+  dueDay: number;
+  reminderDaysBefore: number;
+  enabledPaymentMethods: PaymentMethod[];
+}
+
+/** Configuración financiera de la academia — día de vencimiento, aviso previo, métodos de pago habilitados. */
+export async function getFinanceSettings(): Promise<FinanceSettingsRow | null> {
+  const supabase = await createClient();
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return null;
+
+  const { data, error } = await supabase
+    .from("academia_finance_settings")
+    .select("*")
+    .eq("academia_id", academiaId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("getFinanceSettings() falló:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    dueDay: data.due_day,
+    reminderDaysBefore: data.reminder_days_before,
+    enabledPaymentMethods: data.enabled_payment_methods as PaymentMethod[],
+  };
+}
+
+export interface CategoryFeeRow {
+  category: Category;
+  monthlyAmount: number;
+  activePlayers: number;
+}
+
+/** Valor de mensualidad por categoría formativa, con el conteo real de jugadores activos en cada una. */
+export async function getCategoryFees(): Promise<CategoryFeeRow[]> {
+  const supabase = await createClient();
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return [];
+
+  const [{ data: fees, error }, { data: players }] = await Promise.all([
+    supabase.from("category_fees").select("category, monthly_amount").eq("academia_id", academiaId),
+    supabase.from("players").select("category").eq("status", "Disponible"),
+  ]);
+
+  if (error) {
+    console.error("getCategoryFees() falló:", error);
+    return [];
+  }
+
+  const feeByCategory = new Map((fees ?? []).map((f) => [f.category, Number(f.monthly_amount)]));
+  const countByCategory = new Map<string, number>();
+  for (const p of players ?? []) {
+    countByCategory.set(p.category, (countByCategory.get(p.category) ?? 0) + 1);
+  }
+
+  return categories.map((category) => ({
+    category,
+    monthlyAmount: feeByCategory.get(category) ?? 0,
+    activePlayers: countByCategory.get(category) ?? 0,
+  }));
+}
+
 const monthNamesCap = [
   "Enero",
   "Febrero",
@@ -201,28 +273,37 @@ const monthNamesCap = [
  * evita depender de un cron/Edge Function que este proyecto no tiene todavía,
  * pero logra el mismo resultado para el usuario: la secretaria nunca tiene
  * que generar la mensualidad a mano desde el wizard.
+ *
+ * El monto usa el valor real por categoría (`category_fees`, editable en
+ * Configuración financiera) y la fecha límite usa el día configurado en
+ * `academia_finance_settings` — ya no son valores fijos en el código.
  */
 export async function ensureCurrentMonthMensualidades(): Promise<void> {
   const supabase = await createClient();
   const now = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthLabel = `${monthNamesCap[now.getMonth()]} ${now.getFullYear()}`;
-  const dueDate = `${period}-05`;
 
   const academia = await getDefaultAcademiaId();
   if (!academia) return;
 
-  const { data: concept } = await supabase
-    .from("payment_concepts")
-    .select("id, suggested_amount")
-    .eq("academia_id", academia)
-    .eq("name", "Mensualidad")
-    .eq("is_recurring", true)
-    .maybeSingle();
-  if (!concept) return;
+  const [{ data: concept }, { data: players }, { data: fees }, settings] = await Promise.all([
+    supabase
+      .from("payment_concepts")
+      .select("id")
+      .eq("academia_id", academia)
+      .eq("name", "Mensualidad")
+      .eq("is_recurring", true)
+      .maybeSingle(),
+    supabase.from("players").select("id, category").eq("status", "Disponible"),
+    supabase.from("category_fees").select("category, monthly_amount").eq("academia_id", academia),
+    getFinanceSettings(),
+  ]);
+  if (!concept || !players || players.length === 0) return;
 
-  const { data: players } = await supabase.from("players").select("id").eq("status", "Disponible");
-  if (!players || players.length === 0) return;
+  const dueDay = String(settings?.dueDay ?? 5).padStart(2, "0");
+  const dueDate = `${period}-${dueDay}`;
+  const amountByCategory = new Map((fees ?? []).map((f) => [f.category, Number(f.monthly_amount)]));
 
   const { data: existing } = await supabase
     .from("obligations")
@@ -242,7 +323,7 @@ export async function ensureCurrentMonthMensualidades(): Promise<void> {
       concept_id: concept.id,
       title: `Mensualidad ${monthLabel}`,
       description: `Cuota mensual de formación deportiva — ${monthLabel.toLowerCase()}.`,
-      amount: concept.suggested_amount,
+      amount: amountByCategory.get(p.category) ?? 0,
       due_date: dueDate,
       status: "Pendiente",
     })),

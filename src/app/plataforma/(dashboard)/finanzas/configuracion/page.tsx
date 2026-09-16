@@ -1,17 +1,17 @@
 import { FinanceSectionHeader } from "@/components/dashboard/finanzas/shared";
 import { FinanceSettingsTabs } from "@/components/dashboard/finanzas/FinanceSettingsTabs";
-import { getConcepts } from "@/lib/data/finance";
+import { getCategoryFees, getConcepts, getFinanceSettings } from "@/lib/data/finance";
 
 export const dynamic = "force-dynamic";
 
-/** Configuración financiera — solo interfaz, preparada para futuras reglas de negocio. */
+/** Configuración financiera — mensualidades, categorías, métodos de pago y políticas de cobro conectados a Supabase. */
 export default async function FinanzasConfiguracionPage() {
-  const concepts = await getConcepts();
+  const [concepts, settings, categoryFees] = await Promise.all([getConcepts(), getFinanceSettings(), getCategoryFees()]);
 
   return (
     <div className="space-y-6">
       <FinanceSectionHeader title="Configuración" subtitle="Valores, categorías, métodos de pago y políticas de cobro." />
-      <FinanceSettingsTabs conceptsCount={concepts.length} />
+      <FinanceSettingsTabs conceptsCount={concepts.length} settings={settings} categoryFees={categoryFees} />
     </div>
   );
 }

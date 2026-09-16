@@ -45,20 +45,27 @@ async function uploadRequestPhoto(
 ): Promise<string | null> {
   if (!file || file.size === 0) return null;
 
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `solicitudes/${crypto.randomUUID()}.${extension}`;
+  try {
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `solicitudes/${crypto.randomUUID()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("player-photos")
-    .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
+    const { error: uploadError } = await supabase.storage
+      .from("player-photos")
+      .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
 
-  if (uploadError) {
-    console.error("uploadRequestPhoto error:", uploadError);
+    if (uploadError) {
+      console.error("uploadRequestPhoto error:", uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage.from("player-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (err) {
+    // Falla de red al subir la foto (frecuente en datos móviles) — no debe
+    // tumbar toda la solicitud, se envía sin foto en vez de perder los datos.
+    console.error("uploadRequestPhoto excepción:", err);
     return null;
   }
-
-  const { data } = supabase.storage.from("player-photos").getPublicUrl(path);
-  return data.publicUrl;
 }
 
 /**
@@ -104,59 +111,67 @@ export async function submitPlayerRegistration(
   const supabase = await createClient();
 
   const photoFile = formData.get("photo");
-  const photoUrl =
-    photoFile instanceof File && photoFile.size > 0 ? await uploadRequestPhoto(supabase, photoFile) : null;
 
-  const { error } = await supabase.from("player_registration_requests").insert({
-    // Deportivo
-    first_name: toTitleCase(firstNameRaw),
-    last_name: toTitleCase(lastNameRaw),
-    nickname: str(formData, "nickname"),
-    birth_date: birthDate,
-    position,
-    position_group: positionGroup,
-    category: "Sub-15",
-    photo_url: photoUrl,
-    height_cm: num(formData, "height_cm"),
-    weight_kg: num(formData, "weight_kg"),
-    dominant_foot: oneOf(formData, "dominant_foot", dominantFeet) as Enums<"dominant_foot"> | null,
-    requested_jersey_number: num(formData, "requested_jersey_number"),
-    previous_club: str(formData, "previous_club"),
-    years_playing: num(formData, "years_playing"),
+  try {
+    const photoUrl =
+      photoFile instanceof File && photoFile.size > 0 ? await uploadRequestPhoto(supabase, photoFile) : null;
 
-    // Personal
-    document_type: oneOf(formData, "document_type", documentTypes),
-    document_number: str(formData, "document_number"),
-    birth_place: str(formData, "birth_place"),
-    residence_place: str(formData, "residence_place"),
-    address: str(formData, "address"),
-    school_name: schoolName,
-    school_grade: str(formData, "school_grade"),
-    phone: str(formData, "phone"),
+    const { error } = await supabase.from("player_registration_requests").insert({
+      // Deportivo
+      first_name: toTitleCase(firstNameRaw),
+      last_name: toTitleCase(lastNameRaw),
+      nickname: str(formData, "nickname"),
+      birth_date: birthDate,
+      position,
+      position_group: positionGroup,
+      category: "Sub-15",
+      photo_url: photoUrl,
+      height_cm: num(formData, "height_cm"),
+      weight_kg: num(formData, "weight_kg"),
+      dominant_foot: oneOf(formData, "dominant_foot", dominantFeet) as Enums<"dominant_foot"> | null,
+      requested_jersey_number: num(formData, "requested_jersey_number"),
+      previous_club: str(formData, "previous_club"),
+      years_playing: num(formData, "years_playing"),
 
-    // Acudiente y emergencia
-    guardian_name: str(formData, "guardian_name") ? toTitleCase(str(formData, "guardian_name")!) : null,
-    guardian_relationship: oneOf(formData, "guardian_relationship", relationships),
-    guardian_phone: str(formData, "guardian_phone"),
-    guardian_email: str(formData, "guardian_email"),
-    emergency_contact_name: str(formData, "emergency_contact_name")
-      ? toTitleCase(str(formData, "emergency_contact_name")!)
-      : null,
-    emergency_contact_phone: str(formData, "emergency_contact_phone"),
+      // Personal
+      document_type: oneOf(formData, "document_type", documentTypes),
+      document_number: str(formData, "document_number"),
+      birth_place: str(formData, "birth_place"),
+      residence_place: str(formData, "residence_place"),
+      address: str(formData, "address"),
+      school_name: schoolName,
+      school_grade: str(formData, "school_grade"),
+      phone: str(formData, "phone"),
 
-    // Salud y autorizaciones
-    eps_name: str(formData, "eps_name"),
-    blood_type: oneOf(formData, "blood_type", bloodTypes),
-    allergies: str(formData, "allergies"),
-    medical_conditions: str(formData, "medical_conditions"),
-    medical_authorization: medicalAuthorization,
-    image_authorization: imageAuthorization,
-  });
+      // Acudiente y emergencia
+      guardian_name: str(formData, "guardian_name") ? toTitleCase(str(formData, "guardian_name")!) : null,
+      guardian_relationship: oneOf(formData, "guardian_relationship", relationships),
+      guardian_phone: str(formData, "guardian_phone"),
+      guardian_email: str(formData, "guardian_email"),
+      emergency_contact_name: str(formData, "emergency_contact_name")
+        ? toTitleCase(str(formData, "emergency_contact_name")!)
+        : null,
+      emergency_contact_phone: str(formData, "emergency_contact_phone"),
 
-  if (error) {
-    console.error("submitPlayerRegistration() falló:", error);
-    return { error: "No se pudo enviar la solicitud. Intenta de nuevo." };
+      // Salud y autorizaciones
+      eps_name: str(formData, "eps_name"),
+      blood_type: oneOf(formData, "blood_type", bloodTypes),
+      allergies: str(formData, "allergies"),
+      medical_conditions: str(formData, "medical_conditions"),
+      medical_authorization: medicalAuthorization,
+      image_authorization: imageAuthorization,
+    });
+
+    if (error) {
+      console.error("submitPlayerRegistration() falló:", error);
+      return { error: "No se pudo enviar la solicitud. Intenta de nuevo." };
+    }
+
+    return { success: true };
+  } catch (err) {
+    // Falla de red inesperada (frecuente en datos móviles) — sin este catch,
+    // una excepción aquí tumbaba la página entera y parecía que "no pasaba nada".
+    console.error("submitPlayerRegistration() excepción:", err);
+    return { error: "No se pudo enviar la solicitud — revisa tu conexión e intenta de nuevo." };
   }
-
-  return { success: true };
 }

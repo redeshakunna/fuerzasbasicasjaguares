@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
-import { getDefaultAcademiaId } from "@/lib/data/finance";
+import { getDefaultAcademiaId, getFinanceSettings, type PaymentMethod } from "@/lib/data/finance";
+import type { Category } from "@/lib/data/categories";
 
 export interface FinanceActionState {
   error?: string;
@@ -260,5 +261,95 @@ export async function enviarRecordatorios(obligationIds: string[]): Promise<Fina
 
   revalidatePath("/plataforma/finanzas");
   revalidatePath("/plataforma/finanzas/cuentas-por-cobrar");
+  return { success: true };
+}
+
+/** Actualiza el día de vencimiento mensual y los días de aviso previo de recordatorio. */
+export async function actualizarPoliticasCobro(input: {
+  dueDay: number;
+  reminderDaysBefore: number;
+}): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para editar la configuración." };
+  if (input.dueDay < 1 || input.dueDay > 28) return { error: "El día de vencimiento debe estar entre 1 y 28." };
+  if (input.reminderDaysBefore < 0) return { error: "Los días de recordatorio no pueden ser negativos." };
+
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return { error: "No se encontró la academia activa." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("academia_finance_settings")
+    .update({ due_day: input.dueDay, reminder_days_before: input.reminderDaysBefore, updated_at: new Date().toISOString() })
+    .eq("academia_id", academiaId);
+
+  if (error) {
+    console.error("actualizarPoliticasCobro() falló:", error);
+    return { error: "No se pudo guardar. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/configuracion");
+  return { success: true };
+}
+
+/** Activa/desactiva un método de pago habilitado para registrar cobros. */
+export async function alternarMetodoPago(method: PaymentMethod, enabled: boolean): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para editar la configuración." };
+
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return { error: "No se encontró la academia activa." };
+
+  const settings = await getFinanceSettings();
+  if (!settings) return { error: "No se encontró la configuración financiera." };
+
+  const next = enabled
+    ? [...new Set([...settings.enabledPaymentMethods, method])]
+    : settings.enabledPaymentMethods.filter((m) => m !== method);
+
+  if (next.length === 0) return { error: "Debe quedar al menos un método de pago habilitado." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("academia_finance_settings")
+    .update({ enabled_payment_methods: next, updated_at: new Date().toISOString() })
+    .eq("academia_id", academiaId);
+
+  if (error) {
+    console.error("alternarMetodoPago() falló:", error);
+    return { error: "No se pudo guardar. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/configuracion");
+  revalidatePath("/plataforma/finanzas/registrar-pago");
+  return { success: true };
+}
+
+/** Actualiza el valor sugerido de mensualidad de una categoría formativa. */
+export async function actualizarValorMensualidad(category: Category, monthlyAmount: number): Promise<FinanceActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión para editar la configuración." };
+  if (monthlyAmount < 0) return { error: "El valor no puede ser negativo." };
+
+  const academiaId = await getDefaultAcademiaId();
+  if (!academiaId) return { error: "No se encontró la academia activa." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("category_fees").upsert(
+    {
+      academia_id: academiaId,
+      category,
+      monthly_amount: monthlyAmount,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "academia_id,category" },
+  );
+
+  if (error) {
+    console.error("actualizarValorMensualidad() falló:", error);
+    return { error: "No se pudo guardar. Intenta de nuevo." };
+  }
+
+  revalidatePath("/plataforma/finanzas/configuracion");
   return { success: true };
 }
