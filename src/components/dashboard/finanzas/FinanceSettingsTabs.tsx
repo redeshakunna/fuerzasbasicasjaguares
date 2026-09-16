@@ -10,7 +10,8 @@ import {
   actualizarValorMensualidad,
   alternarMetodoPago,
 } from "@/app/plataforma/(dashboard)/finanzas/actions";
-import { ALL_PAYMENT_METHODS, type CategoryFeeRow, type FinanceSettingsRow, type PaymentMethod } from "@/lib/data/finance";
+import type { CategoryFeeRow, FinanceSettingsRow } from "@/lib/data/finance";
+import { ALL_PAYMENT_METHODS, type PaymentMethod } from "@/lib/finance/payment-methods";
 
 const tabs = [
   { id: "mensualidades", label: "Mensualidades", icon: Wallet },

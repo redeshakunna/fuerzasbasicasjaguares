@@ -6,6 +6,7 @@ import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 import { getMonthlyStats, getPlayerReportContext, getPreviousReportTasks } from "@/lib/data/reports";
 import { nextCategory } from "@/lib/data/categories";
 import { generateAreaConcepts, generateMonthlyReport, generateRecommendation, generateTasks } from "@/lib/informes/report-generator";
+import { generateReportWithAI } from "@/lib/informes/ai-report";
 
 export interface ReportActionState {
   error?: string;
@@ -20,11 +21,18 @@ export interface ManualReportInput {
   tasks: string;
 }
 
-/** Genera (o regenera) el Informe de Evolución del mes por IA (sistema experto por reglas) — queda en Borrador para revisión. */
+/**
+ * Genera (o regenera) el Informe de Evolución del mes — queda en Borrador para revisión.
+ * Si el técnico escribe observaciones, se usan junto con las estadísticas reales para
+ * generar el informe con IA (Claude); si no hay observaciones, o la IA falla por
+ * cualquier motivo (sin API key, red, etc.), se usa el generador por reglas como
+ * respaldo — el informe nunca se queda sin generar.
+ */
 export async function generateReport(
   playerId: string,
   playerFirstName: string,
   period: string,
+  coachObservations?: string,
 ): Promise<ReportActionState> {
   const staff = await getCurrentStaffProfile();
   if (!staff) return { error: "Debes iniciar sesión para generar el informe." };
@@ -34,18 +42,42 @@ export async function generateReport(
     getPreviousReportTasks(playerId, period),
     getPlayerReportContext(playerId),
   ]);
-  const summary = generateMonthlyReport({
-    playerFirstName,
-    period,
-    averageScore: stats.averageScore,
-    previousAverageScore: stats.previousAverageScore,
-    attendancePct: stats.attendancePct,
-    evaluationsCount: stats.evaluationsCount,
-    coachNotes: stats.coachNotes,
-  });
 
-  const areaConcepts = generateAreaConcepts(stats.areaScores, stats.evaluationsCount);
-  const tasks = generateTasks(stats.areaScores, stats.evaluationsCount);
+  const aiResult = coachObservations?.trim()
+    ? await generateReportWithAI({
+        playerFirstName,
+        period,
+        averageScore: stats.averageScore,
+        previousAverageScore: stats.previousAverageScore,
+        attendancePct: stats.attendancePct,
+        evaluationsCount: stats.evaluationsCount,
+        areaScores: stats.areaScores,
+        coachNotes: stats.coachNotes,
+        coachObservations,
+      })
+    : null;
+
+  const summary =
+    aiResult?.summary ??
+    generateMonthlyReport({
+      playerFirstName,
+      period,
+      averageScore: stats.averageScore,
+      previousAverageScore: stats.previousAverageScore,
+      attendancePct: stats.attendancePct,
+      evaluationsCount: stats.evaluationsCount,
+      coachNotes: stats.coachNotes,
+    });
+
+  const areaConcepts = aiResult
+    ? {
+        technical: aiResult.technicalNotes,
+        tactical: aiResult.tacticalNotes,
+        physical: aiResult.physicalNotes,
+        attitude: aiResult.attitudeNotes,
+      }
+    : generateAreaConcepts(stats.areaScores, stats.evaluationsCount);
+  const tasks = aiResult?.tasks ?? generateTasks(stats.areaScores, stats.evaluationsCount);
   const recommendation = playerContext
     ? generateRecommendation({
         averageScore: stats.averageScore,
@@ -191,6 +223,24 @@ export async function markReportReviewed(reportId: string, playerId: string): Pr
   if (error) {
     console.error("markReportReviewed() falló:", error);
     return { error: "No se pudo actualizar el informe." };
+  }
+
+  revalidatePath(`/plataforma/jugadores/${playerId}`);
+  return { success: true };
+}
+
+/** Elimina un informe — solo admin, ya que un informe enviado puede ser evidencia frente a la familia. */
+export async function deleteReport(reportId: string, playerId: string): Promise<ReportActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff) return { error: "Debes iniciar sesión." };
+  if (!staff.isAdmin) return { error: "Solo un administrador puede eliminar informes." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("player_reports").delete().eq("id", reportId);
+
+  if (error) {
+    console.error("deleteReport() falló:", error);
+    return { error: "No se pudo eliminar el informe." };
   }
 
   revalidatePath(`/plataforma/jugadores/${playerId}`);

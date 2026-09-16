@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import { categories, type Category } from "@/lib/data/categories";
+import { ALL_PAYMENT_METHODS, type PaymentMethod } from "@/lib/finance/payment-methods";
 
-/** Catálogo fijo de métodos de pago que la plataforma sabe manejar (Registrar pago, Configuración). */
-export const ALL_PAYMENT_METHODS = ["Efectivo", "Transferencia", "Nequi / Daviplata", "Tarjeta"] as const;
-export type PaymentMethod = (typeof ALL_PAYMENT_METHODS)[number];
+// Re-exportados para no romper los imports existentes de server actions/data
+// que ya apuntaban aquí. Los componentes cliente deben importar directamente
+// desde "@/lib/finance/payment-methods" (ver comentario en ese archivo).
+export { ALL_PAYMENT_METHODS };
+export type { PaymentMethod };
 
 export type ObligationStatus = "Pendiente" | "Pagado" | "Vencido" | "Parcial";
 

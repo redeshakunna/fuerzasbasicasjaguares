@@ -12,13 +12,14 @@ import {
   RefreshCw,
   Send,
   Sparkles,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 import { Card, CardHeader } from "../../ui/Card";
 import { Badge } from "../../ui/Badge";
 import {
   createManualReport,
-  generateReport,
+  deleteReport,
   markReportReviewed,
   sendReport,
   updateReportFields,
@@ -28,6 +29,7 @@ import { setPerformanceGroup, setPromotionReady } from "@/app/plataforma/(dashbo
 import { areaLabel, periodLabel, type ReportArea } from "@/lib/informes/report-generator";
 import type { MonthlyParticipation, PlayerReportRow } from "@/lib/data/reports";
 import { printPlayerReport, type PrintPlayerInfo } from "./print-player-report";
+import { GenerateReportDialog } from "./GenerateReportDialog";
 
 function statusTone(status: string): "gold" | "turquoise" | "green" {
   if (status === "Revisado") return "turquoise";
@@ -192,6 +194,7 @@ function ReportCard({
   currentCategory,
   currentPerformanceGroup,
   isCurrent,
+  isAdmin,
   printInfo,
   participation,
 }: {
@@ -204,11 +207,14 @@ function ReportCard({
   currentCategory: string;
   currentPerformanceGroup: string | null;
   isCurrent: boolean;
+  isAdmin: boolean;
   printInfo: PrintPlayerInfo;
   participation: MonthlyParticipation;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [summary, setSummary] = useState(report.summary);
   const [technicalNotes, setTechnicalNotes] = useState(report.technical_notes ?? "");
   const [tacticalNotes, setTacticalNotes] = useState(report.tactical_notes ?? "");
@@ -252,16 +258,16 @@ function ReportCard({
     });
   }
 
-  function regenerate() {
+  function send() {
     startTransition(async () => {
-      await generateReport(playerId, playerFirstName, report.period);
+      await sendReport(report.id, playerId, sendDate);
       router.refresh();
     });
   }
 
-  function send() {
+  function remove() {
     startTransition(async () => {
-      await sendReport(report.id, playerId, sendDate);
+      await deleteReport(report.id, playerId);
       router.refresh();
     });
   }
@@ -469,7 +475,7 @@ function ReportCard({
           {report.source === "ia" ? (
             <button
               type="button"
-              onClick={regenerate}
+              onClick={() => setRegenerateDialogOpen(true)}
               disabled={isPending}
               className="inline-flex items-center gap-1.5 rounded-lg border border-jaguar-ink/10 px-3 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/60 transition-colors hover:bg-jaguar-ink/[0.03] disabled:opacity-50"
             >
@@ -497,6 +503,41 @@ function ReportCard({
               <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.1} aria-hidden />
               Marcar como revisado
             </button>
+          ) : null}
+          {isAdmin ? (
+            <div className="relative">
+              {confirmDelete ? (
+                <div className="absolute right-0 top-full z-10 mt-2 w-[240px] rounded-2xl border border-jaguar-ink/10 bg-white p-3.5 shadow-xl">
+                  <p className="text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink">¿Eliminar este informe?</p>
+                  <p className="mt-1 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/50">No se puede deshacer.</p>
+                  <div className="mt-2.5 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className="rounded-lg px-2.5 py-1.5 text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55 hover:bg-jaguar-ink/[0.04]"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={remove}
+                      disabled={isPending}
+                      className="rounded-lg bg-jaguar-maroon-600 px-2.5 py-1.5 text-[11.5px] lg:text-[12.5px] font-semibold text-white hover:bg-jaguar-maroon-700 disabled:opacity-60"
+                    >
+                      {isPending ? "Eliminando…" : "Eliminar"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setConfirmDelete((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-jaguar-ink/10 px-3 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-maroon-600/70 hover:bg-jaguar-maroon-500/8"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                Eliminar
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -569,6 +610,16 @@ function ReportCard({
           </motion.div>
         ) : null}
       </Card>
+
+      {regenerateDialogOpen ? (
+        <GenerateReportDialog
+          playerId={playerId}
+          playerFirstName={playerFirstName}
+          period={report.period}
+          isRegenerate
+          onClose={() => setRegenerateDialogOpen(false)}
+        />
+      ) : null}
     </motion.div>
   );
 }
@@ -584,6 +635,7 @@ export function PlayerReportsTab({
   guardianPhone,
   currentCategory,
   currentPerformanceGroup,
+  isAdmin,
   printInfo,
   participationByPeriod,
 }: {
@@ -596,12 +648,14 @@ export function PlayerReportsTab({
   guardianPhone: string | null;
   currentCategory: string;
   currentPerformanceGroup: string | null;
+  isAdmin: boolean;
   printInfo: PrintPlayerInfo;
   participationByPeriod: Record<string, MonthlyParticipation>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [manualFormOpen, setManualFormOpen] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const hasCurrentPeriodReport = reports.some((r) => r.period === currentPeriod);
   const emptyParticipation: MonthlyParticipation = {
     trainingsTotal: 0,
@@ -610,13 +664,6 @@ export function PlayerReportsTab({
     matchesStarted: 0,
     minutesPlayed: 0,
   };
-
-  function generateCurrent() {
-    startTransition(async () => {
-      await generateReport(playerId, playerFirstName, currentPeriod);
-      router.refresh();
-    });
-  }
 
   function submitManual(input: ManualReportInput) {
     startTransition(async () => {
@@ -639,12 +686,11 @@ export function PlayerReportsTab({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={generateCurrent}
-                  disabled={isPending}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-[12.5px] lg:text-[13.5px] font-semibold text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+                  onClick={() => setGenerateDialogOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-[12.5px] lg:text-[13.5px] font-semibold text-white transition-colors hover:bg-violet-700"
                 >
                   <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  {isPending ? "Generando…" : "Generar con IA"}
+                  Generar con IA
                 </button>
                 <button
                   type="button"
@@ -663,6 +709,16 @@ export function PlayerReportsTab({
         ) : null}
       </Card>
 
+      {generateDialogOpen ? (
+        <GenerateReportDialog
+          playerId={playerId}
+          playerFirstName={playerFirstName}
+          period={currentPeriod}
+          isRegenerate={false}
+          onClose={() => setGenerateDialogOpen(false)}
+        />
+      ) : null}
+
       {reports.length === 0 ? (
         <Card className="flex flex-col items-center gap-2 px-6 py-14 text-center">
           <Sparkles className="h-6 w-6 text-jaguar-ink/20" strokeWidth={1.6} aria-hidden />
@@ -680,6 +736,7 @@ export function PlayerReportsTab({
               guardianPhone={guardianPhone}
               currentCategory={currentCategory}
               currentPerformanceGroup={currentPerformanceGroup}
+              isAdmin={isAdmin}
               printInfo={printInfo}
               participation={participationByPeriod[latest.period] ?? emptyParticipation}
               isCurrent
@@ -702,6 +759,7 @@ export function PlayerReportsTab({
                   guardianPhone={guardianPhone}
                   currentCategory={currentCategory}
                   currentPerformanceGroup={currentPerformanceGroup}
+                  isAdmin={isAdmin}
                   printInfo={printInfo}
                   participation={participationByPeriod[r.period] ?? emptyParticipation}
                   isCurrent={false}

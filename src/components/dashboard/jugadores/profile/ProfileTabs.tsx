@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ClipboardCheck, FileText, Info, Sparkles, Wallet } from "lucide-react";
 
 const tabs = [
@@ -34,8 +34,23 @@ export function ProfileTabs({
 }) {
   const [active, setActive] = useState<TabId>("general");
 
+  // Permite que otros componentes del perfil (ej. las acciones rápidas) salten
+  // a una pestaña específica sin tener que levantar este estado hasta el page.tsx
+  // del servidor — se dispara con window.dispatchEvent(new CustomEvent("profile:switch-tab", { detail: "documentos" })).
+  useEffect(() => {
+    function onSwitchTab(e: Event) {
+      const tabId = (e as CustomEvent<string>).detail;
+      if (tabs.some((t) => t.id === tabId)) {
+        setActive(tabId as TabId);
+        document.getElementById("profile-tabs-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+    window.addEventListener("profile:switch-tab", onSwitchTab);
+    return () => window.removeEventListener("profile:switch-tab", onSwitchTab);
+  }, []);
+
   return (
-    <div>
+    <div id="profile-tabs-anchor">
       <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl bg-jaguar-mist/60 p-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;

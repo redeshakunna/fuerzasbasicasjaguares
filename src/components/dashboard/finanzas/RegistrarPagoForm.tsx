@@ -6,7 +6,8 @@ import { Banknote, Check, CreditCard, Landmark, Smartphone } from "lucide-react"
 import { Card } from "../ui/Card";
 import { Avatar } from "../ui/Avatar";
 import { registrarPago } from "@/app/plataforma/(dashboard)/finanzas/actions";
-import { ALL_PAYMENT_METHODS, type ObligationRow, type PaymentMethod } from "@/lib/data/finance";
+import type { ObligationRow } from "@/lib/data/finance";
+import { ALL_PAYMENT_METHODS, type PaymentMethod } from "@/lib/finance/payment-methods";
 import { formatCOP } from "@/lib/finance/format";
 
 const methodIcons: Record<PaymentMethod, typeof Banknote> = {

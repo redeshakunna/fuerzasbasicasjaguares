@@ -14,12 +14,14 @@ import { PlayerAttendanceHistory } from "@/components/dashboard/jugadores/profil
 import { PlayerFinanceMirror } from "@/components/dashboard/jugadores/profile/PlayerFinanceMirror";
 import { PlayerReportsTab } from "@/components/dashboard/jugadores/profile/PlayerReportsTab";
 import { ProfileActionsBar } from "@/components/dashboard/jugadores/profile/ProfileActionsBar";
+import { PlayerInjuriesCard } from "@/components/dashboard/jugadores/profile/PlayerInjuriesCard";
 import {
   getCurrentStaffProfile,
   getNextTrainingForCategory,
   getPlayerById,
   getPlayerEvaluations,
 } from "@/lib/data/player-profile";
+import { getPlayerInjuries } from "@/lib/data/injuries";
 import { calculateAge, getFullName } from "@/lib/data/players-stats";
 import { getEstadoGeneral } from "@/lib/data/player-profile-view";
 import { getPlayerCallupHistory } from "@/lib/data/match-callups";
@@ -57,7 +59,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
 
   if (!player) notFound();
 
-  const [nextTraining, matchHistory, attendanceHistory, reports, evaluationHistory, documents, staffNames] =
+  const [nextTraining, matchHistory, attendanceHistory, reports, evaluationHistory, documents, staffNames, injuries] =
     await Promise.all([
       getNextTrainingForCategory(player.category),
       getPlayerCallupHistory(player.id),
@@ -66,6 +68,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
       getPlayerEvaluations(player.id, 100),
       getPlayerDocuments(player.id),
       getPrimaryStaffNames(),
+      getPlayerInjuries(player.id),
     ]);
   const currentPeriod = new Date().toISOString().slice(0, 7);
   const lastTrainingDate =
@@ -142,6 +145,8 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               <PlayerMatchHistory history={matchHistory} />
               <PlayerAttendanceHistory history={attendanceHistory} />
             </div>
+
+            <PlayerInjuriesCard playerId={player.id} injuries={injuries} />
           </div>
         }
         evaluacionesContent={<PlayerEvaluationsTab evaluations={evaluationHistory} />}
@@ -158,13 +163,14 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
             guardianPhone={player.guardian_phone}
             currentCategory={player.category}
             currentPerformanceGroup={player.performance_group}
+            isAdmin={isAdmin}
             printInfo={printInfo}
             participationByPeriod={participationByPeriod}
           />
         }
       />
 
-      <ProfileActionsBar />
+      <ProfileActionsBar player={player} playerFullName={getFullName(player)} isAdmin={isAdmin} />
     </div>
   );
 }

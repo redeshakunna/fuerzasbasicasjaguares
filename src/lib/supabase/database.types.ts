@@ -965,6 +965,73 @@ export type Database = {
           },
         ]
       }
+      player_injuries: {
+        Row: {
+          academia_id: string | null
+          created_at: string
+          created_by: string | null
+          expected_recovery_date: string | null
+          id: string
+          injury_type: string
+          notes: string | null
+          player_id: string
+          recovered_at: string | null
+          severity: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          academia_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_recovery_date?: string | null
+          id?: string
+          injury_type: string
+          notes?: string | null
+          player_id: string
+          recovered_at?: string | null
+          severity: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          academia_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_recovery_date?: string | null
+          id?: string
+          injury_type?: string
+          notes?: string | null
+          player_id?: string
+          recovered_at?: string | null
+          severity?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_injuries_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: false
+            referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_injuries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_injuries_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_registration_requests: {
         Row: {
           address: string | null

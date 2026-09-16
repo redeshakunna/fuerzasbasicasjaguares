@@ -38,7 +38,7 @@ export function PlayerCard({ player }: { player: RosterPlayer }) {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-4 gap-1 border-t border-jaguar-ink/6 pt-4 text-center">
+      <div className="mt-5 grid grid-cols-3 gap-2 border-t border-jaguar-ink/6 pt-4 text-center">
         <div>
           <p className="text-[10.5px] lg:text-[11.5px] font-medium text-jaguar-ink/40">Edad</p>
           <p className="mt-0.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink">{player.age} años</p>
@@ -51,10 +51,11 @@ export function PlayerCard({ player }: { player: RosterPlayer }) {
           <p className="text-[10.5px] lg:text-[11.5px] font-medium text-jaguar-ink/40">Peso</p>
           <p className="mt-0.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink">{player.weight}</p>
         </div>
-        <div>
-          <p className="text-[10.5px] lg:text-[11.5px] font-medium text-jaguar-ink/40">Últ. Entrenamiento</p>
-          <p className="mt-0.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink">{player.lastTraining}</p>
-        </div>
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-center gap-1.5 text-center">
+        <p className="text-[10.5px] lg:text-[11.5px] font-medium text-jaguar-ink/40">Últ. entrenamiento:</p>
+        <p className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink">{player.lastTraining}</p>
       </div>
 
       <Link
