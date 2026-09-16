@@ -15,7 +15,10 @@ const severityTone: Record<InjurySeverity, "gold" | "maroon"> = {
 };
 
 function formatDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
+  const parts = iso.split("-").map(Number);
+  const y = parts[0] ?? 1970;
+  const m = parts[1] ?? 1;
+  const d = parts[2] ?? 1;
   return new Date(y, m - 1, d).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
 }
 
