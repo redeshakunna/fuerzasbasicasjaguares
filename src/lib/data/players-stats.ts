@@ -106,7 +106,7 @@ const positionGroupTone: Record<string, RosterPlayer["positionTone"]> = {
  * `attendance`), reemplaza a la columna `last_training_at`, que nunca se actualiza
  * automáticamente al guardar asistencia.
  */
-export function toRosterPlayer(row: PlayerRow, lastTrainingDate?: string | null): RosterPlayer {
+export function toRosterPlayer(row: PlayerRow, lastTrainingDate?: string | null, coachName?: string | null): RosterPlayer {
   const fullName = getFullName(row);
   return {
     id: row.id,
@@ -124,6 +124,8 @@ export function toRosterPlayer(row: PlayerRow, lastTrainingDate?: string | null)
     weight: row.weight_kg ? `${row.weight_kg} kg` : "—",
     lastTraining: formatLastTraining(lastTrainingDate !== undefined ? lastTrainingDate : row.last_training_at),
     dominantFoot: row.dominant_foot,
+    coachId: row.assigned_coach_id,
+    coachName: coachName ?? null,
   };
 }
 

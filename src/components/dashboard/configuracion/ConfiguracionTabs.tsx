@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Building2, Calendar, LayoutGrid, Plus, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Building2, Calendar, LayoutGrid, Pencil, Plus, ShieldCheck, Users } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { Avatar } from "../ui/Avatar";
-import { createTemporada, inviteStaffMember, updateReportCadence, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
+import { createTemporada, inviteStaffMember, updateReportCadence, updateStaffMember, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
 import { categories, activeCategories } from "@/lib/data/categories";
 import type { AcademiaRow, TemporadaRow } from "@/lib/data/academia";
 import type { StaffProfile } from "@/lib/data/staff";
@@ -74,6 +74,14 @@ export function ConfiguracionTabs({
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [isInvitePending, startInviteTransition] = useTransition();
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editCargoId, setEditCargoId] = useState("");
+  const [editNuevoCargoNombre, setEditNuevoCargoNombre] = useState("");
+  const [editRole, setEditRole] = useState<Enums<"user_role">>("entrenador");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isEditPending, startEditTransition] = useTransition();
+
   function submitTemporada() {
     setError(null);
     startTransition(async () => {
@@ -122,6 +130,49 @@ export function ConfiguracionTabs({
       setInviteRole("entrenador");
       setInviteCargoId("");
       setInviteNuevoCargoNombre("");
+      router.refresh();
+    });
+  }
+
+  function startEditingStaff(s: StaffProfile) {
+    setEditingId(s.id);
+    setEditFullName(s.full_name);
+    setEditCargoId(s.cargo_id ?? "");
+    setEditNuevoCargoNombre("");
+    setEditRole(s.role);
+    setEditError(null);
+  }
+
+  function cancelEditingStaff() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  function submitEditStaff(profileId: string) {
+    setEditError(null);
+    if (!editFullName.trim()) {
+      setEditError("El nombre es obligatorio.");
+      return;
+    }
+    if (editCargoId === NUEVO_CARGO && !editNuevoCargoNombre.trim()) {
+      setEditError("Escribe el nombre del cargo nuevo.");
+      return;
+    }
+    startEditTransition(async () => {
+      const formData = new FormData();
+      formData.set("full_name", editFullName.trim());
+      formData.set("role", editRole);
+      if (editCargoId === NUEVO_CARGO) {
+        formData.set("nuevo_cargo_nombre", editNuevoCargoNombre.trim());
+      } else if (editCargoId) {
+        formData.set("cargo_id", editCargoId);
+      }
+      const result = await updateStaffMember(profileId, formData);
+      if (result.error) {
+        setEditError(result.error);
+        return;
+      }
+      setEditingId(null);
       router.refresh();
     });
   }
@@ -459,6 +510,86 @@ export function ConfiguracionTabs({
                   .filter((s) => s.role !== "admin")
                   .map((s) => {
                     const cargoNombre = cargos.find((c) => c.id === s.cargo_id)?.nombre;
+                    const isEditingStaff = editingId === s.id;
+
+                    if (isEditingStaff) {
+                      return (
+                        <div key={s.id} className="rounded-2xl border border-jaguar-ink/10 bg-jaguar-mist/40 p-4">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label className="block">
+                              <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nombre completo</span>
+                              <input
+                                value={editFullName}
+                                onChange={(e) => setEditFullName(e.target.value)}
+                                className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Cargo</span>
+                              <select
+                                value={editCargoId}
+                                onChange={(e) => setEditCargoId(e.target.value)}
+                                className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                              >
+                                <option value="">Sin especificar</option>
+                                {cargos.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.nombre}
+                                  </option>
+                                ))}
+                                <option value={NUEVO_CARGO}>+ Nuevo cargo…</option>
+                              </select>
+                            </label>
+                            <label className="block">
+                              <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nivel de acceso</span>
+                              <select
+                                value={editRole}
+                                onChange={(e) => setEditRole(e.target.value as Enums<"user_role">)}
+                                className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                              >
+                                {roleOptions.map((r) => (
+                                  <option key={r} value={r}>
+                                    {roleLabel[r]}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            {editCargoId === NUEVO_CARGO ? (
+                              <label className="block">
+                                <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nombre del cargo nuevo</span>
+                                <input
+                                  value={editNuevoCargoNombre}
+                                  onChange={(e) => setEditNuevoCargoNombre(e.target.value)}
+                                  placeholder="Psicólogo, Preparador Físico…"
+                                  className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                                />
+                              </label>
+                            ) : null}
+                          </div>
+                          {editError ? (
+                            <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-maroon-600">{editError}</p>
+                          ) : null}
+                          <div className="mt-3 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={cancelEditingStaff}
+                              className="rounded-lg px-3 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/55 hover:bg-jaguar-ink/[0.04]"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => submitEditStaff(s.id)}
+                              disabled={isEditPending || !editFullName}
+                              className="rounded-lg bg-jaguar-green-600 px-3.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-white hover:bg-jaguar-green-700 disabled:opacity-60"
+                            >
+                              {isEditPending ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={s.id} className="flex items-center gap-3 rounded-xl border border-jaguar-ink/8 px-4 py-3">
                         <Avatar initials={s.full_name.slice(0, 2).toUpperCase()} size={36} photoUrl={s.avatar_url} />
@@ -468,6 +599,16 @@ export function ConfiguracionTabs({
                             {cargoNombre ? `${cargoNombre} · ${roleLabel[s.role]}` : roleLabel[s.role]}
                           </p>
                         </div>
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            onClick={() => startEditingStaff(s)}
+                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/50 hover:bg-jaguar-ink/[0.05] hover:text-jaguar-ink"
+                          >
+                            <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                            Editar
+                          </button>
+                        ) : null}
                       </div>
                     );
                   })

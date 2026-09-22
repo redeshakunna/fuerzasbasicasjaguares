@@ -31,7 +31,7 @@ export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
   return (
     <Card className="overflow-hidden pb-2">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse text-left">
+        <table className="w-full min-w-[920px] border-collapse text-left">
           <thead>
             <tr className="border-y border-jaguar-ink/6 text-[11px] lg:text-[12px] font-bold uppercase tracking-[0.04em] text-jaguar-ink/40">
               <th className="px-6 py-3 font-bold">Jugador</th>
@@ -39,6 +39,7 @@ export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
               <th className="px-3 py-3 font-bold">Estado</th>
               <th className="px-3 py-3 font-bold">Nivel</th>
               <th className="px-3 py-3 font-bold">Edad</th>
+              <th className="px-3 py-3 font-bold">Entrenador</th>
               <th className="px-3 py-3 font-bold">Últ. entrenamiento</th>
               <th className="px-6 py-3 font-bold text-right">Acción</th>
             </tr>
@@ -72,6 +73,7 @@ export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
                   <StarRating value={player.rating} size={13} />
                 </td>
                 <td className="px-3 py-3.5 text-[13px] lg:text-[14px] text-jaguar-ink/65">{player.age} años</td>
+                <td className="px-3 py-3.5 text-[13px] lg:text-[14px] text-jaguar-ink/55">{player.coachName ?? "Sin asignar"}</td>
                 <td className="px-3 py-3.5 text-[13px] lg:text-[14px] text-jaguar-ink/55">{player.lastTraining}</td>
                 <td className="px-6 py-3.5 text-right">
                   <Link

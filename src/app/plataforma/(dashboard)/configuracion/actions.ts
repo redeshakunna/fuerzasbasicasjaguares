@@ -178,3 +178,50 @@ export async function inviteStaffMember(_prevState: InviteStaffState, formData: 
   revalidatePath("/plataforma/configuracion");
   return { success: true };
 }
+
+export interface UpdateStaffState {
+  error?: string;
+  success?: boolean;
+}
+
+/**
+ * Edita los datos de un profesional ya existente: nombre, cargo y nivel de
+ * acceso. Permite crear un cargo nuevo al vuelo, igual que al invitar.
+ * Solo administradores.
+ */
+export async function updateStaffMember(profileId: string, formData: FormData): Promise<UpdateStaffState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff?.isAdmin) return { error: "Solo un administrador puede editar profesionales." };
+
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const role = String(formData.get("role") ?? "") as Enums<"user_role">;
+  let cargoId = String(formData.get("cargo_id") ?? "").trim() || null;
+  const nuevoCargoNombre = String(formData.get("nuevo_cargo_nombre") ?? "").trim();
+
+  if (!fullName) return { error: "El nombre es obligatorio." };
+  if (!(["admin", "directivo", "coordinador", "entrenador"] as string[]).includes(role)) {
+    return { error: "Selecciona un nivel de acceso válido." };
+  }
+
+  if (!cargoId && nuevoCargoNombre) {
+    const cargoResult = await createCargo(nuevoCargoNombre);
+    if (cargoResult.error || !cargoResult.cargoId) {
+      return { error: cargoResult.error ?? "No se pudo crear el cargo nuevo." };
+    }
+    cargoId = cargoResult.cargoId;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName, role, cargo_id: cargoId })
+    .eq("id", profileId);
+
+  if (error) {
+    console.error("updateStaffMember() falló:", error);
+    return { error: "No se pudo guardar los cambios." };
+  }
+
+  revalidatePath("/plataforma/configuracion");
+  return { success: true };
+}

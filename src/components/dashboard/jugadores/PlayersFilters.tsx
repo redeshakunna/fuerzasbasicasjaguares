@@ -12,6 +12,7 @@ export interface PlayersFilterState {
   status: string;
   foot: string;
   age: string;
+  coach: string;
 }
 
 export const defaultPlayersFilters: PlayersFilterState = {
@@ -21,6 +22,7 @@ export const defaultPlayersFilters: PlayersFilterState = {
   status: "Todos",
   foot: "Todos",
   age: "Todas",
+  coach: "Todos",
 };
 
 export function hasActiveFilters(filters: PlayersFilterState): boolean {
@@ -30,7 +32,8 @@ export function hasActiveFilters(filters: PlayersFilterState): boolean {
     filters.position !== defaultPlayersFilters.position ||
     filters.status !== defaultPlayersFilters.status ||
     filters.foot !== defaultPlayersFilters.foot ||
-    filters.age !== defaultPlayersFilters.age
+    filters.age !== defaultPlayersFilters.age ||
+    filters.coach !== defaultPlayersFilters.coach
   );
 }
 
@@ -76,6 +79,7 @@ interface PlayersFiltersProps {
   positions: string[];
   feet: string[];
   ages: number[];
+  coaches: string[];
 }
 
 /** Barra de búsqueda + filtros reales del plantel (categoría, posición, estado, pie hábil, edad) + selector de vista. */
@@ -89,6 +93,7 @@ export function PlayersFilters({
   positions,
   feet,
   ages,
+  coaches,
 }: PlayersFiltersProps) {
   const active = hasActiveFilters(filters);
 
@@ -160,6 +165,7 @@ export function PlayersFilters({
           options={ages.map(String)}
           onChange={(v) => update("age", v)}
         />
+        <FilterSelect label="Entrenador" allLabel="Todos" value={filters.coach} options={coaches} onChange={(v) => update("coach", v)} />
 
         {active ? (
           <button

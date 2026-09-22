@@ -58,6 +58,11 @@ export function PlayerCard({ player }: { player: RosterPlayer }) {
         <p className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink">{player.lastTraining}</p>
       </div>
 
+      <div className="mt-1 flex items-center justify-center gap-1.5 text-center">
+        <p className="text-[10.5px] lg:text-[11.5px] font-medium text-jaguar-ink/40">Entrenador:</p>
+        <p className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink">{player.coachName ?? "Sin asignar"}</p>
+      </div>
+
       <Link
         href={`/plataforma/jugadores/${player.id}`}
         className="group mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-jaguar-ink/10 py-2.5 text-[13px] lg:text-[14px] font-semibold text-jaguar-ink transition-colors hover:border-jaguar-green-500/40 hover:text-jaguar-green-600"

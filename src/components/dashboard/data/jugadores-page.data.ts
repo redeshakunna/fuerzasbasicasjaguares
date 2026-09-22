@@ -24,6 +24,8 @@ export interface RosterPlayer {
   weight: string;
   lastTraining: string;
   dominantFoot: string | null;
+  coachId: string | null;
+  coachName: string | null;
 }
 
 export interface UpcomingBirthday {

@@ -23,6 +23,10 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
     [players],
   );
   const ages = useMemo(() => Array.from(new Set(players.map((p) => p.age))).sort((a, b) => a - b), [players]);
+  const coaches = useMemo(
+    () => Array.from(new Set(players.map((p) => p.coachName ?? "Sin asignar"))).sort(),
+    [players],
+  );
 
   const filteredPlayers = useMemo(() => {
     const query = norm(filters.search);
@@ -33,6 +37,7 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
       if (filters.status !== "Todos" && p.status !== filters.status) return false;
       if (filters.foot !== "Todos" && p.dominantFoot !== filters.foot) return false;
       if (filters.age !== "Todas" && String(p.age) !== filters.age) return false;
+      if (filters.coach !== "Todos" && (p.coachName ?? "Sin asignar") !== filters.coach) return false;
       return true;
     });
   }, [players, filters]);
@@ -51,6 +56,7 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
         positions={positions}
         feet={feet}
         ages={ages}
+        coaches={coaches}
       />
 
       {noResultsFromFilters ? (
