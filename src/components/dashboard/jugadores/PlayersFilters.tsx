@@ -79,7 +79,6 @@ interface PlayersFiltersProps {
   positions: string[];
   feet: string[];
   ages: number[];
-  coaches: string[];
 }
 
 /** Barra de búsqueda + filtros reales del plantel (categoría, posición, estado, pie hábil, edad) + selector de vista. */
@@ -93,7 +92,6 @@ export function PlayersFilters({
   positions,
   feet,
   ages,
-  coaches,
 }: PlayersFiltersProps) {
   const active = hasActiveFilters(filters);
 
@@ -165,7 +163,6 @@ export function PlayersFilters({
           options={ages.map(String)}
           onChange={(v) => update("age", v)}
         />
-        <FilterSelect label="Entrenador" allLabel="Todos" value={filters.coach} options={coaches} onChange={(v) => update("coach", v)} />
 
         {active ? (
           <button

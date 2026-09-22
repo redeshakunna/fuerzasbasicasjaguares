@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { SearchX } from "lucide-react";
 import type { RosterPlayer } from "../data/jugadores-page.data";
+import { CoachSubmenu } from "./CoachSubmenu";
 import { defaultPlayersFilters, PlayersFilters, type PlayersFilterState, type PlayersView } from "./PlayersFilters";
 import { PlayersGrid } from "./PlayersGrid";
 import { PlayersTableView } from "./PlayersTableView";
@@ -46,6 +47,8 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
 
   return (
     <div className="space-y-5">
+      <CoachSubmenu coaches={coaches} active={filters.coach} onChange={(coach) => setFilters((f) => ({ ...f, coach }))} />
+
       <PlayersFilters
         view={view}
         onViewChange={setView}
@@ -56,7 +59,6 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
         positions={positions}
         feet={feet}
         ages={ages}
-        coaches={coaches}
       />
 
       {noResultsFromFilters ? (

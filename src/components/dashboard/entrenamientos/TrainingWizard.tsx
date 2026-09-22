@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,9 +12,11 @@ import {
   ChevronRight,
   ClipboardList,
   CloudRain,
+  GitBranch,
   Loader2,
   Package,
   PenLine,
+  Repeat,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -573,6 +576,38 @@ function IntroScreen({ onChoose }: { onChoose: (mode: CreationMode) => void }) {
             <span className="text-[12.5px] lg:text-[13.5px] leading-relaxed text-jaguar-ink/55">{opt.description}</span>
           </button>
         ))}
+      </div>
+
+      <div className="mt-6 border-t border-jaguar-ink/8 pt-5">
+        <p className="text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink/50">
+          ¿Vas a planificar varias sesiones a la vez? Empezá por un ciclo o un microciclo — después le vas agregando entrenamientos.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Link
+            href="/plataforma/entrenamientos/planificacion?tab=ciclos&crear=1"
+            className="flex items-center gap-3 rounded-xl border border-jaguar-ink/10 bg-white px-4 py-3.5 text-left transition-colors hover:border-jaguar-green-500/50 hover:shadow-[0_4px_16px_-8px_rgba(13,18,16,0.18)]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-jaguar-turquoise-500/10 text-jaguar-turquoise-600">
+              <GitBranch className="h-4.5 w-4.5" strokeWidth={2} aria-hidden />
+            </span>
+            <span>
+              <span className="block text-[13.5px] lg:text-[14.5px] font-extrabold text-jaguar-ink">Nuevo ciclo</span>
+              <span className="block text-[12px] lg:text-[13px] text-jaguar-ink/50">Pretemporada, Competición…</span>
+            </span>
+          </Link>
+          <Link
+            href="/plataforma/entrenamientos/planificacion?tab=microciclos&crear=1"
+            className="flex items-center gap-3 rounded-xl border border-jaguar-ink/10 bg-white px-4 py-3.5 text-left transition-colors hover:border-jaguar-green-500/50 hover:shadow-[0_4px_16px_-8px_rgba(13,18,16,0.18)]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-jaguar-turquoise-500/10 text-jaguar-turquoise-600">
+              <Repeat className="h-4.5 w-4.5" strokeWidth={2} aria-hidden />
+            </span>
+            <span>
+              <span className="block text-[13.5px] lg:text-[14.5px] font-extrabold text-jaguar-ink">Nuevo microciclo</span>
+              <span className="block text-[12px] lg:text-[13px] text-jaguar-ink/50">Un bloque de sesiones con un objetivo concreto</span>
+            </span>
+          </Link>
+        </div>
       </div>
     </div>
   );

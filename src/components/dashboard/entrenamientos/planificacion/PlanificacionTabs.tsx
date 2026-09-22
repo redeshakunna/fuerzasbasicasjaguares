@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarRange, GitBranch, Plus, Repeat, Pencil } from "lucide-react";
 import { Card } from "../../ui/Card";
@@ -84,6 +84,8 @@ export function PlanificacionTabs({
   staff,
   canManageCiclos,
   canManageMicrociclos,
+  initialTab,
+  autoCreate,
 }: {
   temporadas: TemporadaRow[];
   ciclos: CicloRow[];
@@ -91,9 +93,12 @@ export function PlanificacionTabs({
   staff: StaffProfile[];
   canManageCiclos: boolean;
   canManageMicrociclos: boolean;
+  initialTab?: TabId;
+  autoCreate?: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabId>("temporadas");
+  const [tab, setTab] = useState<TabId>(initialTab ?? "temporadas");
+  const [autoCreatePending, setAutoCreatePending] = useState(Boolean(autoCreate));
 
   const staffName = useMemo(() => {
     const map = new Map(staff.map((s) => [s.id, s.full_name]));
@@ -127,10 +132,28 @@ export function PlanificacionTabs({
           <TemporadasTab temporadas={temporadas} staff={staff} staffName={staffName} canManage={canManageCiclos} router={router} />
         ) : null}
         {tab === "ciclos" ? (
-          <CiclosTab temporadas={temporadas} ciclos={ciclos} staff={staff} staffName={staffName} canManage={canManageCiclos} router={router} />
+          <CiclosTab
+            temporadas={temporadas}
+            ciclos={ciclos}
+            staff={staff}
+            staffName={staffName}
+            canManage={canManageCiclos}
+            router={router}
+            autoOpenCreate={autoCreatePending}
+            onAutoOpenHandled={() => setAutoCreatePending(false)}
+          />
         ) : null}
         {tab === "microciclos" ? (
-          <MicrociclosTab ciclos={ciclos} microciclos={microciclos} staff={staff} staffName={staffName} canManage={canManageMicrociclos} router={router} />
+          <MicrociclosTab
+            ciclos={ciclos}
+            microciclos={microciclos}
+            staff={staff}
+            staffName={staffName}
+            canManage={canManageMicrociclos}
+            router={router}
+            autoOpenCreate={autoCreatePending}
+            onAutoOpenHandled={() => setAutoCreatePending(false)}
+          />
         ) : null}
       </Card>
     </div>
@@ -374,6 +397,8 @@ function CiclosTab({
   staffName,
   canManage,
   router,
+  autoOpenCreate,
+  onAutoOpenHandled,
 }: {
   temporadas: TemporadaRow[];
   ciclos: CicloRow[];
@@ -381,6 +406,8 @@ function CiclosTab({
   staffName: (id: string | null) => string;
   canManage: boolean;
   router: ReturnType<typeof useRouter>;
+  autoOpenCreate?: boolean;
+  onAutoOpenHandled?: () => void;
 }) {
   const [filterTemporada, setFilterTemporada] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -420,6 +447,14 @@ function CiclosTab({
     setEditingId(null);
     setShowForm(true);
   }
+
+  useEffect(() => {
+    if (autoOpenCreate && canManage) {
+      startCreate();
+      onAutoOpenHandled?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function startEdit(c: CicloRow) {
     setEditingId(c.id);
@@ -634,6 +669,8 @@ function MicrociclosTab({
   staffName,
   canManage,
   router,
+  autoOpenCreate,
+  onAutoOpenHandled,
 }: {
   ciclos: CicloRow[];
   microciclos: MicrocicloRow[];
@@ -641,6 +678,8 @@ function MicrociclosTab({
   staffName: (id: string | null) => string;
   canManage: boolean;
   router: ReturnType<typeof useRouter>;
+  autoOpenCreate?: boolean;
+  onAutoOpenHandled?: () => void;
 }) {
   const [filterCiclo, setFilterCiclo] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -685,6 +724,14 @@ function MicrociclosTab({
     setEditingId(null);
     setShowForm(true);
   }
+
+  useEffect(() => {
+    if (autoOpenCreate && canManage) {
+      startCreate();
+      onAutoOpenHandled?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function startEdit(m: MicrocicloRow) {
     setEditingId(m.id);

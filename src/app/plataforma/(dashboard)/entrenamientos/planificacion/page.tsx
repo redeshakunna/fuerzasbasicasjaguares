@@ -9,12 +9,22 @@ import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 
 export const dynamic = "force-dynamic";
 
+const validTabs = new Set(["temporadas", "ciclos", "microciclos"]);
+
+interface PlanificacionPageProps {
+  searchParams: Promise<{ tab?: string; crear?: string }>;
+}
+
 /**
  * Planificación deportiva — Temporada → Ciclo → Microciclo. Vive dentro de
  * "Entrenamientos" pero es una capa independiente: no obliga a nada, un
  * entrenamiento suelto sigue funcionando exactamente igual sin pasar por acá.
  */
-export default async function PlanificacionPage() {
+export default async function PlanificacionPage({ searchParams }: PlanificacionPageProps) {
+  const { tab, crear } = await searchParams;
+  const initialTab = validTabs.has(tab ?? "") ? (tab as "temporadas" | "ciclos" | "microciclos") : undefined;
+  const autoCreate = crear === "1";
+
   const [temporadas, ciclos, microciclos, staff, currentStaff] = await Promise.all([
     getTemporadas(),
     getCiclos(),
@@ -54,6 +64,8 @@ export default async function PlanificacionPage() {
         staff={staff}
         canManageCiclos={canManageCiclos}
         canManageMicrociclos={canManageMicrociclos}
+        initialTab={initialTab}
+        autoCreate={autoCreate}
       />
     </div>
   );
