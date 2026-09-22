@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Badge } from "../../ui/Badge";
 import { Card } from "../../ui/Card";
 import { StarRating } from "../../ui/StarRating";
-import { PerformanceGroupToggle } from "./PerformanceGroupToggle";
+import { AssignedCoachSelect, type AssignableCoach } from "./AssignedCoachSelect";
 import { PromotionToggle } from "./PromotionToggle";
 import { getFullName } from "@/lib/data/players-stats";
 import { getPositionCoordinates } from "@/lib/data/player-profile-view";
@@ -34,7 +34,8 @@ interface ProfileHeroProps {
   age: number;
   evaluationsUpToDate: boolean;
   estadoGeneral: EstadoGeneral;
-  canEditPerformanceGroup: boolean;
+  coaches: AssignableCoach[];
+  canEditAssignedCoach: boolean;
   canEditPromotion: boolean;
 }
 
@@ -43,7 +44,8 @@ export function ProfileHero({
   age,
   evaluationsUpToDate,
   estadoGeneral,
-  canEditPerformanceGroup,
+  coaches,
+  canEditAssignedCoach,
   canEditPromotion,
 }: ProfileHeroProps) {
   const circumference = 2 * Math.PI * 42;
@@ -93,10 +95,11 @@ export function ProfileHero({
                 ) : null}
                 <Badge tone="green">{player.category}</Badge>
                 <Badge tone="turquoise">{player.position}</Badge>
-                <PerformanceGroupToggle
+                <AssignedCoachSelect
                   playerId={player.id}
-                  initialGroup={player.performance_group}
-                  editable={canEditPerformanceGroup}
+                  initialCoachId={player.assigned_coach_id}
+                  coaches={coaches}
+                  editable={canEditAssignedCoach}
                 />
               </div>
               <p className="mt-1.5 text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">

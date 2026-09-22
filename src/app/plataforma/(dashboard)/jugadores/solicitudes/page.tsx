@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ShieldAlert } from "lucide-react";
 import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 import { getRegistrationRequests } from "@/lib/data/registration-requests";
-import { SolicitudCard } from "./SolicitudCard";
+import { SolicitudesList } from "./SolicitudesList";
 
 export const dynamic = "force-dynamic";
 
@@ -85,11 +85,7 @@ export default async function SolicitudesPage({ searchParams }: SolicitudesPageP
           {" "}por ahora.
         </div>
       ) : (
-        <div className="space-y-3">
-          {requests.map((request) => (
-            <SolicitudCard key={request.id} request={request} reviewable={activeTab === "Pendiente"} />
-          ))}
-        </div>
+        <SolicitudesList requests={requests} reviewable={activeTab === "Pendiente"} />
       )}
     </div>
   );

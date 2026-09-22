@@ -254,6 +254,41 @@ export interface SetPerformanceGroupState {
   success?: boolean;
 }
 
+export interface SetAssignedCoachState {
+  error?: string;
+  success?: boolean;
+}
+
+/**
+ * Server Action — asigna (o quita) el entrenador responsable de un jugador.
+ * Reemplaza a la antigua Categoría A/B: ya no es un nivel de desempeño, es
+ * simplemente "a qué entrenador reporta este jugador" — sin jerarquía entre
+ * ellos. La función RPC `set_player_assigned_coach` valida de nuevo el rol
+ * en la base de datos (defensa en profundidad) y que el id recibido sea
+ * realmente un entrenador o coordinador.
+ */
+export async function setAssignedCoach(playerId: string, coachId: string | null): Promise<SetAssignedCoachState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff || !(staff.role === "entrenador" || staff.role === "coordinador" || staff.isAdmin)) {
+    return { error: "Solo el técnico, el coordinador o el súper admin pueden asignar entrenador." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_player_assigned_coach", {
+    p_player_id: playerId,
+    p_coach_id: coachId,
+  });
+
+  if (error) {
+    console.error("setAssignedCoach() falló:", error);
+    return { error: "No se pudo actualizar el entrenador asignado." };
+  }
+
+  revalidatePath(`/plataforma/jugadores/${playerId}`);
+  revalidatePath("/plataforma/jugadores");
+  return { success: true };
+}
+
 /**
  * Server Action — cambia la categoría de desempeño (A/B) de un jugador.
  * Excepción explícita a la regla de "solo súper admin edita jugadores":

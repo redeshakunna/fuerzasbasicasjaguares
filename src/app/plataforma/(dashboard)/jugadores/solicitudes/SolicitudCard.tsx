@@ -11,6 +11,9 @@ import type { RegistrationRequest } from "@/lib/data/registration-requests";
 interface SolicitudCardProps {
   request: RegistrationRequest;
   reviewable: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 function formatDate(iso: string) {
@@ -30,14 +33,13 @@ function DetailRow({ label, value }: { label: string; value: string | number | n
 }
 
 /** Tarjeta de una solicitud de inscripción — resumen + detalle expandible + acciones de aprobar/rechazar. */
-export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
+export function SolicitudCard({ request, reviewable, selectable, selected, onToggleSelect }: SolicitudCardProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
   const [jerseyValue, setJerseyValue] = useState(
     request.requested_jersey_number ? String(request.requested_jersey_number) : ""
   );
-  const [performanceGroup, setPerformanceGroup] = useState<"A" | "B" | "">("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
@@ -48,13 +50,9 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
 
   function onApprove() {
     setError(null);
-    if (!performanceGroup) {
-      setError("Selecciona el grupo de desempeño (A o B) del jugador.");
-      return;
-    }
     startTransition(async () => {
       const jerseyNumber = jerseyValue ? Number(jerseyValue) : null;
-      const result = await approveRegistrationRequest(request.id, jerseyNumber, performanceGroup);
+      const result = await approveRegistrationRequest(request.id, jerseyNumber);
       if (result.error) {
         setError(result.error);
         return;
@@ -80,13 +78,28 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
   if (resolved) return null;
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-jaguar-ink/8 bg-white shadow-[0_1px_2px_rgba(13,18,16,0.04)]">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left"
-      >
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-jaguar-mist">
+    <div
+      className={`overflow-hidden rounded-[16px] border bg-white shadow-[0_1px_2px_rgba(13,18,16,0.04)] ${
+        selectable && selected ? "border-jaguar-green-500/40 ring-1 ring-jaguar-green-500/20" : "border-jaguar-ink/8"
+      }`}
+    >
+      <div className="flex items-center gap-1 pl-4 pr-1">
+        {selectable ? (
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={() => onToggleSelect?.(request.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Seleccionar solicitud de ${fullName}`}
+            className="h-4 w-4 shrink-0 rounded border-jaguar-ink/25 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
+          />
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center gap-3.5 py-3.5 pl-2.5 text-left"
+        >
+          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-jaguar-mist">
           <Image
             src={request.photo_url || "/brand/default-avatar.png"}
             alt={fullName}
@@ -110,7 +123,8 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
           strokeWidth={2}
           aria-hidden
         />
-      </button>
+        </button>
+      </div>
 
       {expanded ? (
         <div className="border-t border-jaguar-ink/6 px-4 py-4">
@@ -194,27 +208,6 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
                   <div className="flex flex-wrap gap-4">
                     <div>
                       <label className="block text-[12.5px] font-semibold text-jaguar-ink/70">
-                        Grupo de desempeño *
-                      </label>
-                      <div className="mt-1.5 flex gap-1.5">
-                        {(["A", "B"] as const).map((g) => (
-                          <button
-                            key={g}
-                            type="button"
-                            onClick={() => setPerformanceGroup(g)}
-                            className={`h-9 w-9 rounded-xl text-[13.5px] font-bold transition-colors ${
-                              performanceGroup === g
-                                ? "bg-jaguar-green-600 text-white"
-                                : "bg-jaguar-mist/60 text-jaguar-ink/60 hover:bg-jaguar-ink/[0.06]"
-                            }`}
-                          >
-                            {g}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[12.5px] font-semibold text-jaguar-ink/70">
                         Número de camiseta definitivo
                       </label>
                       <input
@@ -231,7 +224,7 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={isPending || !performanceGroup}
+                      disabled={isPending}
                       onClick={onApprove}
                       className="flex items-center gap-1.5 rounded-xl bg-jaguar-green-600 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-jaguar-green-700 disabled:opacity-60"
                     >

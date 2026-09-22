@@ -28,7 +28,7 @@ import { getPlayerCallupHistory } from "@/lib/data/match-callups";
 import { getPlayerAttendanceHistory } from "@/lib/data/attendance";
 import { getMonthlyParticipation, getPlayerReports, type MonthlyParticipation } from "@/lib/data/reports";
 import { getPlayerDocuments } from "@/lib/data/player-documents";
-import { getPrimaryStaffNames } from "@/lib/data/staff";
+import { getPrimaryStaffNames, getCoachingStaff } from "@/lib/data/staff";
 import type { PrintPlayerInfo } from "@/components/dashboard/jugadores/profile/print-player-report";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
 
   if (!player) notFound();
 
-  const [nextTraining, matchHistory, attendanceHistory, reports, evaluationHistory, documents, staffNames, injuries] =
+  const [nextTraining, matchHistory, attendanceHistory, reports, evaluationHistory, documents, staffNames, injuries, coachingStaff] =
     await Promise.all([
       getNextTrainingForCategory(player.category),
       getPlayerCallupHistory(player.id),
@@ -69,6 +69,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
       getPlayerDocuments(player.id),
       getPrimaryStaffNames(),
       getPlayerInjuries(player.id),
+      getCoachingStaff(),
     ]);
   const currentPeriod = new Date().toISOString().slice(0, 7);
   const lastTrainingDate =
@@ -84,7 +85,10 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
   const latestEvaluation = evaluations[0] ?? null;
   const estadoGeneral = getEstadoGeneral(player, latestEvaluation);
   const isAdmin = staff?.isAdmin ?? false;
-  const canEditPerformanceGroup = isAdmin || staff?.role === "entrenador";
+  const canEditAssignedCoach = isAdmin || staff?.role === "entrenador" || staff?.role === "coordinador";
+  const assignableCoaches = coachingStaff
+    .filter((s) => s.role === "entrenador" || s.role === "coordinador")
+    .map((s) => ({ id: s.id, fullName: s.full_name }));
 
   const chartData = [...evaluations]
     .filter((e) => e.overall_score !== null)
@@ -124,7 +128,8 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
         age={age}
         evaluationsUpToDate={evaluations.length > 0}
         estadoGeneral={estadoGeneral}
-        canEditPerformanceGroup={canEditPerformanceGroup}
+        coaches={assignableCoaches}
+        canEditAssignedCoach={canEditAssignedCoach}
         canEditPromotion={isAdmin}
       />
 

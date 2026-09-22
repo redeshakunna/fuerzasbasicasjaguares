@@ -1353,6 +1353,7 @@ export type Database = {
         Row: {
           academia_id: string | null
           address: string | null
+          assigned_coach_id: string | null
           allergies: string | null
           birth_date: string
           birth_place: string | null
@@ -1403,6 +1404,7 @@ export type Database = {
           academia_id?: string | null
           address?: string | null
           allergies?: string | null
+          assigned_coach_id?: string | null
           birth_date: string
           birth_place?: string | null
           blood_type?: string | null
@@ -1452,6 +1454,7 @@ export type Database = {
           academia_id?: string | null
           address?: string | null
           allergies?: string | null
+          assigned_coach_id?: string | null
           birth_date?: string
           birth_place?: string | null
           blood_type?: string | null
@@ -1503,6 +1506,13 @@ export type Database = {
             columns: ["academia_id"]
             isOneToOne: false
             referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_assigned_coach_id_fkey"
+            columns: ["assigned_coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1816,6 +1826,10 @@ export type Database = {
           p_response: string
         }
         Returns: boolean
+      }
+      set_player_assigned_coach: {
+        Args: { p_coach_id: string | null; p_player_id: string }
+        Returns: undefined
       }
       set_player_performance_group: {
         Args: { p_group: string; p_player_id: string }
