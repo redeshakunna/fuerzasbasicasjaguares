@@ -98,7 +98,7 @@ export function SolicitudCard({ request, reviewable }: SolicitudCardProps) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] lg:text-[15px] font-bold text-jaguar-ink">{fullName}</p>
           <p className="mt-0.5 text-[12px] lg:text-[12.5px] text-jaguar-ink/50">
-            {request.position} · {age} años · Sub-15
+            {[request.position, request.position_2].filter(Boolean).join(" / ")} · {age} años · Sub-15
           </p>
         </div>
         <div className="hidden items-center gap-1.5 text-[12px] text-jaguar-ink/40 sm:flex">

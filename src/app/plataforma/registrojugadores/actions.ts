@@ -86,10 +86,16 @@ export async function submitPlayerRegistration(
   const firstNameRaw = str(formData, "first_name");
   const lastNameRaw = str(formData, "last_name");
   const birthDate = str(formData, "birth_date");
-  const position = oneOf(formData, "position", positionLabels);
+  const selectedPositions = formData
+    .getAll("positions")
+    .map((v) => String(v))
+    .filter((v, i, arr) => positionLabels.includes(v) && arr.indexOf(v) === i)
+    .slice(0, 2);
+  const position = selectedPositions[0] ?? null;
+  const position2 = selectedPositions[1] ?? null;
 
   if (!firstNameRaw || !lastNameRaw || !birthDate || !position) {
-    return { error: "Nombres, apellidos, fecha de nacimiento y posición son obligatorios." };
+    return { error: "Nombres, apellidos, fecha de nacimiento y posición (mínimo una) son obligatorios." };
   }
 
   const positionGroup = groupForPosition(position);
@@ -123,6 +129,7 @@ export async function submitPlayerRegistration(
       nickname: str(formData, "nickname"),
       birth_date: birthDate,
       position,
+      position_2: position2,
       position_group: positionGroup,
       category: "Sub-15",
       photo_url: photoUrl,

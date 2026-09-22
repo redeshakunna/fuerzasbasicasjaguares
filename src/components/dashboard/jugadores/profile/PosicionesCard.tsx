@@ -30,6 +30,12 @@ export function PosicionesCard({ player }: { player: PlayerRow }) {
           <span className="text-[12.5px] lg:text-[13.5px] text-jaguar-ink/55">Principal</span>
           <span className="text-[13px] lg:text-[14px] font-bold text-jaguar-ink">{player.position}</span>
         </div>
+        {player.position_2 ? (
+          <div className="mt-2 flex items-center justify-between rounded-xl bg-jaguar-mist/40 px-3.5 py-2.5">
+            <span className="text-[12.5px] lg:text-[13.5px] text-jaguar-ink/55">Secundaria</span>
+            <span className="text-[13px] lg:text-[14px] font-bold text-jaguar-ink">{player.position_2}</span>
+          </div>
+        ) : null}
       </div>
     </Card>
   );

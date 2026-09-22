@@ -38,6 +38,7 @@ function formatOnBlur(e: React.FocusEvent<HTMLInputElement>) {
 export function RegistrationWizard() {
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [state, formAction, isPending] = useActionState(submitPlayerRegistration, initialState);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [jerseyValue, setJerseyValue] = useState("");
@@ -50,7 +51,6 @@ export function RegistrationWizard() {
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const birthDateRef = useRef<HTMLInputElement>(null);
-  const positionRef = useRef<HTMLSelectElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
@@ -82,6 +82,14 @@ export function RegistrationWizard() {
     });
   }
 
+  function togglePosition(label: string) {
+    setSelectedPositions((prev) => {
+      if (prev.includes(label)) return prev.filter((p) => p !== label);
+      if (prev.length >= 2) return prev;
+      return [...prev, label];
+    });
+  }
+
   function goNext() {
     setStepError(null);
     if (step === 1) {
@@ -91,8 +99,8 @@ export function RegistrationWizard() {
       }
     }
     if (step === 3) {
-      if (!positionRef.current?.value) {
-        setStepError("Selecciona la posición del jugador.");
+      if (selectedPositions.length === 0) {
+        setStepError("Selecciona al menos una posición (máximo dos).");
         return;
       }
       if (isJerseyTaken) {
@@ -345,17 +353,39 @@ export function RegistrationWizard() {
           <div className="rounded-xl bg-jaguar-mist/50 px-3.5 py-2.5 text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink/70">
             Categoría: Sub-15
           </div>
-          <Field label="Posición *">
-            <select ref={positionRef} name="position" defaultValue="" className={inputClass}>
-              <option value="" disabled>
-                Selecciona una posición
-              </option>
-              {positionOptions.map((p) => (
-                <option key={p.label} value={p.label}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
+          <Field label="Posición (máximo 2) *">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {positionOptions.map((p) => {
+                const checked = selectedPositions.includes(p.label);
+                const disabled = !checked && selectedPositions.length >= 2;
+                return (
+                  <label
+                    key={p.label}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[12.5px] lg:text-[13.5px] font-medium transition-colors ${
+                      checked
+                        ? "border-jaguar-green-500/50 bg-jaguar-green-500/8 text-jaguar-ink"
+                        : disabled
+                          ? "cursor-not-allowed border-jaguar-ink/8 bg-jaguar-mist/30 text-jaguar-ink/30"
+                          : "cursor-pointer border-jaguar-ink/10 bg-jaguar-mist/40 text-jaguar-ink/70"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="positions"
+                      value={p.label}
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => togglePosition(p.label)}
+                      className="h-4 w-4 shrink-0 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
+                    />
+                    {p.label}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[12px] lg:text-[13px] text-jaguar-ink/40">
+              Marca la posición en la que juega mejor y, si es distinta, la que juega actualmente. Si es la misma, marca solo una.
+            </p>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Pie hábil">

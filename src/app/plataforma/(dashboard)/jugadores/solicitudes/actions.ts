@@ -69,6 +69,7 @@ export async function approveRegistrationRequest(
       nickname: request.nickname,
       birth_date: request.birth_date,
       position: request.position,
+      position_2: request.position_2,
       position_group: request.position_group,
       category: request.category,
       performance_group: performanceGroup,

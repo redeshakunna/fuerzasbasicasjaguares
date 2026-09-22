@@ -1063,6 +1063,7 @@ export type Database = {
           photo_url: string | null
           position: string
           position_group: Database["public"]["Enums"]["position_group"]
+          position_2: string | null
           previous_club: string | null
           request_status: string
           requested_jersey_number: number | null
@@ -1106,6 +1107,7 @@ export type Database = {
           photo_url?: string | null
           position: string
           position_group: Database["public"]["Enums"]["position_group"]
+          position_2?: string | null
           previous_club?: string | null
           request_status?: string
           requested_jersey_number?: number | null
@@ -1149,6 +1151,7 @@ export type Database = {
           photo_url?: string | null
           position?: string
           position_group?: Database["public"]["Enums"]["position_group"]
+          position_2?: string | null
           previous_club?: string | null
           request_status?: string
           requested_jersey_number?: number | null
@@ -1352,6 +1355,7 @@ export type Database = {
           photo_url: string | null
           position: string
           position_group: Database["public"]["Enums"]["position_group"]
+          position_2: string | null
           previous_club: string | null
           promotion_ready: boolean
           rating: number | null
@@ -1400,6 +1404,7 @@ export type Database = {
           photo_url?: string | null
           position: string
           position_group: Database["public"]["Enums"]["position_group"]
+          position_2?: string | null
           previous_club?: string | null
           promotion_ready?: boolean
           rating?: number | null
@@ -1448,6 +1453,7 @@ export type Database = {
           photo_url?: string | null
           position?: string
           position_group?: Database["public"]["Enums"]["position_group"]
+          position_2?: string | null
           previous_club?: string | null
           promotion_ready?: boolean
           rating?: number | null
