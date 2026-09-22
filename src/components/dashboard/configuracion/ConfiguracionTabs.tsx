@@ -7,7 +7,7 @@ import { ArrowRight, Building2, Calendar, LayoutGrid, Pencil, Plus, ShieldCheck,
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { Avatar } from "../ui/Avatar";
-import { createTemporada, inviteStaffMember, updateReportCadence, updateStaffMember, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
+import { createStaffMember, createTemporada, updateReportCadence, updateStaffMember, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
 import { categories, activeCategories } from "@/lib/data/categories";
 import type { AcademiaRow, TemporadaRow } from "@/lib/data/academia";
 import type { StaffProfile } from "@/lib/data/staff";
@@ -70,6 +70,7 @@ export function ConfiguracionTabs({
   const [inviteRole, setInviteRole] = useState<Enums<"user_role">>("entrenador");
   const [inviteCargoId, setInviteCargoId] = useState("");
   const [inviteNuevoCargoNombre, setInviteNuevoCargoNombre] = useState("");
+  const [inviteGrantAccess, setInviteGrantAccess] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [isInvitePending, startInviteTransition] = useTransition();
@@ -114,22 +115,28 @@ export function ConfiguracionTabs({
       formData.set("full_name", inviteFullName.trim());
       formData.set("email", inviteEmail.trim());
       formData.set("role", inviteRole);
+      formData.set("grant_access", inviteGrantAccess ? "on" : "off");
       if (inviteCargoId === NUEVO_CARGO) {
         formData.set("nuevo_cargo_nombre", inviteNuevoCargoNombre.trim());
       } else if (inviteCargoId) {
         formData.set("cargo_id", inviteCargoId);
       }
-      const result = await inviteStaffMember({}, formData);
+      const result = await createStaffMember({}, formData);
       if (result.error) {
         setInviteError(result.error);
         return;
       }
-      setInviteSuccess(`Invitación enviada a ${inviteEmail.trim()}.`);
+      setInviteSuccess(
+        result.grantedAccess
+          ? `Invitación enviada a ${inviteEmail.trim()}.`
+          : `${inviteFullName.trim()} se agregó al cuerpo técnico, sin acceso a la plataforma.`,
+      );
       setInviteFullName("");
       setInviteEmail("");
       setInviteRole("entrenador");
       setInviteCargoId("");
       setInviteNuevoCargoNombre("");
+      setInviteGrantAccess(false);
       router.refresh();
     });
   }
@@ -477,9 +484,24 @@ export function ConfiguracionTabs({
                     </label>
                   ) : null}
                 </div>
-                <p className="mt-2 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/40">
-                  Le llega un correo para crear su propia contraseña — nunca la escribimos nosotros.
-                </p>
+                <label className="mt-3 flex items-start gap-2.5 rounded-xl border border-jaguar-ink/8 bg-white px-3.5 py-3">
+                  <input
+                    type="checkbox"
+                    checked={inviteGrantAccess}
+                    onChange={(e) => setInviteGrantAccess(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
+                  />
+                  <span>
+                    <span className="block text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink">
+                      Dar acceso a la plataforma ahora
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
+                      {inviteGrantAccess
+                        ? "Le llega un correo para crear su propia contraseña — nunca la escribimos nosotros."
+                        : "Sin marcar, solo queda en el cuerpo técnico con su cargo, sin poder iniciar sesión. Ideal para profesionales que no van a entrar a la plataforma."}
+                    </span>
+                  </span>
+                </label>
                 {inviteError ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-maroon-600">{inviteError}</p> : null}
                 {inviteSuccess ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-green-600">{inviteSuccess}</p> : null}
                 <div className="mt-3 flex justify-end gap-2">
@@ -496,7 +518,7 @@ export function ConfiguracionTabs({
                     disabled={isInvitePending || !inviteFullName || !inviteEmail}
                     className="rounded-lg bg-jaguar-green-600 px-3.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-white hover:bg-jaguar-green-700 disabled:opacity-60"
                   >
-                    {isInvitePending ? "Invitando…" : "Invitar"}
+                    {isInvitePending ? "Creando…" : "Crear"}
                   </button>
                 </div>
               </div>

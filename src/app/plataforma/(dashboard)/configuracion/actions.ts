@@ -107,24 +107,34 @@ export async function createCargo(nombre: string): Promise<ConfigActionState & {
   return { success: true, cargoId: data.id };
 }
 
-export interface InviteStaffState {
+export interface CreateStaffState {
   error?: string;
   success?: boolean;
+  grantedAccess?: boolean;
 }
 
 /**
- * Invita a un profesional nuevo (entrenador, psicólogo, nutricionista, etc.) —
- * crea su cuenta real de acceso (le llega un correo para poner su contraseña,
- * nunca la manejamos nosotros) y su ficha de staff con cargo y nivel de acceso.
- * Solo administradores.
+ * Crea la ficha de un profesional nuevo (entrenador, psicólogo, nutricionista, etc.)
+ * en el cuerpo técnico. Por defecto NO le da acceso a la plataforma: se crea una
+ * cuenta de Supabase Auth "oculta" (sin correo, sin contraseña conocida, email sin
+ * confirmar) solo para poder vincular su ficha — el profesional no puede iniciar
+ * sesión con ella. Esto existe porque `profiles.id` siempre debe ser el id de una
+ * cuenta real de auth.users; no hay forma de tener una ficha de staff totalmente
+ * desligada de una cuenta.
+ *
+ * Si se marca "Dar acceso a la plataforma ahora" (`grant_access`), en cambio se
+ * envía la invitación real por correo (le llega un correo para poner su
+ * contraseña, nunca la manejamos nosotros) — el mismo flujo de siempre, pero
+ * ahora opcional. Solo administradores.
  */
-export async function inviteStaffMember(_prevState: InviteStaffState, formData: FormData): Promise<InviteStaffState> {
+export async function createStaffMember(_prevState: CreateStaffState, formData: FormData): Promise<CreateStaffState> {
   const staff = await getCurrentStaffProfile();
   if (!staff?.isAdmin) return { error: "Solo un administrador puede agregar profesionales." };
 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "") as Enums<"user_role">;
+  const grantAccess = formData.get("grant_access") === "on" || formData.get("grant_access") === "true";
   let cargoId = String(formData.get("cargo_id") ?? "").trim() || null;
   const nuevoCargoNombre = String(formData.get("nuevo_cargo_nombre") ?? "").trim();
 
@@ -151,32 +161,52 @@ export async function inviteStaffMember(_prevState: InviteStaffState, formData: 
   try {
     admin = createAdminClient();
   } catch (err) {
-    console.error("inviteStaffMember() sin service role key:", err);
+    console.error("createStaffMember() sin service role key:", err);
     return { error: "Falta configurar la llave de administrador de Supabase (SUPABASE_SERVICE_ROLE_KEY) en el servidor." };
   }
 
-  const siteUrl = await getSiteUrl();
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${siteUrl}/plataforma/restablecer`,
-  });
+  let userId: string;
 
-  if (inviteError || !invited?.user) {
-    console.error("inviteStaffMember() invite falló:", inviteError);
-    const alreadyExists = inviteError?.message?.toLowerCase().includes("already been registered");
-    return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo enviar la invitación." };
+  if (grantAccess) {
+    const siteUrl = await getSiteUrl();
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${siteUrl}/plataforma/restablecer`,
+    });
+    if (inviteError || !invited?.user) {
+      console.error("createStaffMember() invite falló:", inviteError);
+      const alreadyExists = inviteError?.message?.toLowerCase().includes("already been registered");
+      return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo enviar la invitación." };
+    }
+    userId = invited.user.id;
+  } else {
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: { full_name: fullName },
+    });
+    if (createError || !created?.user) {
+      console.error("createStaffMember() createUser falló:", createError);
+      const alreadyExists = createError?.message?.toLowerCase().includes("already registered");
+      return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo crear el profesional." };
+    }
+    userId = created.user.id;
   }
 
   const { error: profileError } = await admin
     .from("profiles")
-    .upsert({ id: invited.user.id, academia_id: academia.id, full_name: fullName, role, cargo_id: cargoId });
+    .upsert({ id: userId, academia_id: academia.id, full_name: fullName, role, cargo_id: cargoId });
 
   if (profileError) {
-    console.error("inviteStaffMember() profiles falló:", profileError);
-    return { error: "La invitación se envió, pero no se pudo guardar el perfil. Avísale a soporte." };
+    console.error("createStaffMember() profiles falló:", profileError);
+    return {
+      error: grantAccess
+        ? "La invitación se envió, pero no se pudo guardar el perfil. Avísale a soporte."
+        : "Se creó la cuenta, pero no se pudo guardar el perfil. Avísale a soporte.",
+    };
   }
 
   revalidatePath("/plataforma/configuracion");
-  return { success: true };
+  return { success: true, grantedAccess: grantAccess };
 }
 
 export interface UpdateStaffState {
