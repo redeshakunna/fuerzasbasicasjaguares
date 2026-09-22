@@ -7,11 +7,14 @@ import { ArrowRight, Building2, Calendar, LayoutGrid, Plus, ShieldCheck, Users }
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { Avatar } from "../ui/Avatar";
-import { createTemporada, updateReportCadence, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
+import { createTemporada, inviteStaffMember, updateReportCadence, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
 import { categories, activeCategories } from "@/lib/data/categories";
 import type { AcademiaRow, TemporadaRow } from "@/lib/data/academia";
 import type { StaffProfile } from "@/lib/data/staff";
+import type { CargoRow } from "@/lib/data/cargos";
 import type { Enums } from "@/lib/supabase/database.types";
+
+const NUEVO_CARGO = "__nuevo__";
 
 const tabs = [
   { id: "organizacion", label: "Organización", icon: Building2 },
@@ -43,11 +46,13 @@ export function ConfiguracionTabs({
   academia,
   temporadas,
   staff,
+  cargos,
   isAdmin,
 }: {
   academia: AcademiaRow | null;
   temporadas: TemporadaRow[];
   staff: StaffProfile[];
+  cargos: CargoRow[];
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -58,6 +63,16 @@ export function ConfiguracionTabs({
   const [temporadaStart, setTemporadaStart] = useState("");
   const [temporadaEnd, setTemporadaEnd] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<Enums<"user_role">>("entrenador");
+  const [inviteCargoId, setInviteCargoId] = useState("");
+  const [inviteNuevoCargoNombre, setInviteNuevoCargoNombre] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [isInvitePending, startInviteTransition] = useTransition();
 
   function submitTemporada() {
     setError(null);
@@ -71,6 +86,42 @@ export function ConfiguracionTabs({
       setTemporadaName("");
       setTemporadaStart("");
       setTemporadaEnd("");
+      router.refresh();
+    });
+  }
+
+  function submitInvite() {
+    setInviteError(null);
+    setInviteSuccess(null);
+    if (!inviteFullName.trim() || !inviteEmail.trim()) {
+      setInviteError("Nombre y correo son obligatorios.");
+      return;
+    }
+    if (inviteCargoId === NUEVO_CARGO && !inviteNuevoCargoNombre.trim()) {
+      setInviteError("Escribe el nombre del cargo nuevo.");
+      return;
+    }
+    startInviteTransition(async () => {
+      const formData = new FormData();
+      formData.set("full_name", inviteFullName.trim());
+      formData.set("email", inviteEmail.trim());
+      formData.set("role", inviteRole);
+      if (inviteCargoId === NUEVO_CARGO) {
+        formData.set("nuevo_cargo_nombre", inviteNuevoCargoNombre.trim());
+      } else if (inviteCargoId) {
+        formData.set("cargo_id", inviteCargoId);
+      }
+      const result = await inviteStaffMember({}, formData);
+      if (result.error) {
+        setInviteError(result.error);
+        return;
+      }
+      setInviteSuccess(`Invitación enviada a ${inviteEmail.trim()}.`);
+      setInviteFullName("");
+      setInviteEmail("");
+      setInviteRole("entrenador");
+      setInviteCargoId("");
+      setInviteNuevoCargoNombre("");
       router.refresh();
     });
   }
@@ -290,23 +341,136 @@ export function ConfiguracionTabs({
 
         {tab === "entrenadores" ? (
           <div className="space-y-3">
-            <p className="text-[14px] lg:text-[15.5px] font-bold text-jaguar-ink">Cuerpo técnico</p>
-            <p className="text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">Entrenadores, coordinadores y directivos de la academia.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[14px] lg:text-[15.5px] font-bold text-jaguar-ink">Cuerpo técnico</p>
+                <p className="text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">Entrenadores, coordinadores, directivos y demás profesionales de la academia.</p>
+              </div>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInviteError(null);
+                    setInviteSuccess(null);
+                    setShowInviteForm((v) => !v);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-jaguar-ink/10 px-3 py-1.5 text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink/70 hover:bg-jaguar-ink/[0.03]"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  Agregar profesional
+                </button>
+              ) : null}
+            </div>
+
+            {showInviteForm ? (
+              <div className="rounded-2xl border border-jaguar-ink/10 bg-jaguar-mist/40 p-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nombre completo</span>
+                    <input
+                      value={inviteFullName}
+                      onChange={(e) => setInviteFullName(e.target.value)}
+                      placeholder="Juan Pablo Herazo"
+                      className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Correo</span>
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Cargo</span>
+                    <select
+                      value={inviteCargoId}
+                      onChange={(e) => setInviteCargoId(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                    >
+                      <option value="">Sin especificar</option>
+                      {cargos.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                      <option value={NUEVO_CARGO}>+ Nuevo cargo…</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nivel de acceso</span>
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as Enums<"user_role">)}
+                      className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                    >
+                      {roleOptions.map((r) => (
+                        <option key={r} value={r}>
+                          {roleLabel[r]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {inviteCargoId === NUEVO_CARGO ? (
+                    <label className="block">
+                      <span className="text-[11.5px] lg:text-[12.5px] font-semibold text-jaguar-ink/55">Nombre del cargo nuevo</span>
+                      <input
+                        value={inviteNuevoCargoNombre}
+                        onChange={(e) => setInviteNuevoCargoNombre(e.target.value)}
+                        placeholder="Psicólogo, Preparador Físico…"
+                        className="mt-1 w-full rounded-lg border border-jaguar-ink/10 bg-white px-3 py-2 text-[13px] lg:text-[14px]"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/40">
+                  Le llega un correo para crear su propia contraseña — nunca la escribimos nosotros.
+                </p>
+                {inviteError ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-maroon-600">{inviteError}</p> : null}
+                {inviteSuccess ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-green-600">{inviteSuccess}</p> : null}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteForm(false)}
+                    className="rounded-lg px-3 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/55 hover:bg-jaguar-ink/[0.04]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitInvite}
+                    disabled={isInvitePending || !inviteFullName || !inviteEmail}
+                    className="rounded-lg bg-jaguar-green-600 px-3.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-white hover:bg-jaguar-green-700 disabled:opacity-60"
+                  >
+                    {isInvitePending ? "Invitando…" : "Invitar"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-2 space-y-2">
               {staff.length === 0 ? (
                 <p className="text-[12.5px] lg:text-[13.5px] text-jaguar-ink/45">Aún no hay staff registrado.</p>
               ) : (
                 staff
                   .filter((s) => s.role !== "admin")
-                  .map((s) => (
-                    <div key={s.id} className="flex items-center gap-3 rounded-xl border border-jaguar-ink/8 px-4 py-3">
-                      <Avatar initials={s.full_name.slice(0, 2).toUpperCase()} size={36} photoUrl={s.avatar_url} />
-                      <div className="flex-1">
-                        <p className="text-[13px] lg:text-[14px] font-semibold text-jaguar-ink">{s.full_name}</p>
-                        <p className="text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">{roleLabel[s.role]}</p>
+                  .map((s) => {
+                    const cargoNombre = cargos.find((c) => c.id === s.cargo_id)?.nombre;
+                    return (
+                      <div key={s.id} className="flex items-center gap-3 rounded-xl border border-jaguar-ink/8 px-4 py-3">
+                        <Avatar initials={s.full_name.slice(0, 2).toUpperCase()} size={36} photoUrl={s.avatar_url} />
+                        <div className="flex-1">
+                          <p className="text-[13px] lg:text-[14px] font-semibold text-jaguar-ink">{s.full_name}</p>
+                          <p className="text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
+                            {cargoNombre ? `${cargoNombre} · ${roleLabel[s.role]}` : roleLabel[s.role]}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
               )}
             </div>
           </div>

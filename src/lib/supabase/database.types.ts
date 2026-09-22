@@ -207,6 +207,38 @@ export type Database = {
           },
         ]
       }
+      cargos: {
+        Row: {
+          academia_id: string
+          activo: boolean
+          created_at: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          academia_id: string
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          academia_id?: string
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: false
+            referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_fees: {
         Row: {
           academia_id: string
@@ -1479,6 +1511,7 @@ export type Database = {
         Row: {
           academia_id: string | null
           avatar_url: string | null
+          cargo_id: string | null
           created_at: string
           full_name: string
           id: string
@@ -1489,6 +1522,7 @@ export type Database = {
         Insert: {
           academia_id?: string | null
           avatar_url?: string | null
+          cargo_id?: string | null
           created_at?: string
           full_name: string
           id: string
@@ -1499,6 +1533,7 @@ export type Database = {
         Update: {
           academia_id?: string | null
           avatar_url?: string | null
+          cargo_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
@@ -1507,6 +1542,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_academia_id_fkey"
             columns: ["academia_id"]
