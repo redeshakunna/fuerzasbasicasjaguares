@@ -1571,30 +1571,42 @@ export type Database = {
       temporadas: {
         Row: {
           academia_id: string
+          category: string | null
           created_at: string
           end_date: string
           id: string
           is_active: boolean
           name: string
+          objective: string | null
+          responsible_id: string | null
           start_date: string
+          status: Database["public"]["Enums"]["plan_status"]
         }
         Insert: {
           academia_id: string
+          category?: string | null
           created_at?: string
           end_date: string
           id?: string
           is_active?: boolean
           name: string
+          objective?: string | null
+          responsible_id?: string | null
           start_date: string
+          status?: Database["public"]["Enums"]["plan_status"]
         }
         Update: {
           academia_id?: string
+          category?: string | null
           created_at?: string
           end_date?: string
           id?: string
           is_active?: boolean
           name?: string
+          objective?: string | null
+          responsible_id?: string | null
           start_date?: string
+          status?: Database["public"]["Enums"]["plan_status"]
         }
         Relationships: [
           {
@@ -1602,6 +1614,147 @@ export type Database = {
             columns: ["academia_id"]
             isOneToOne: false
             referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporadas_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ciclos: {
+        Row: {
+          academia_id: string
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          objective: string | null
+          observaciones: string | null
+          responsible_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["plan_status"]
+          temporada_id: string
+        }
+        Insert: {
+          academia_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          objective?: string | null
+          observaciones?: string | null
+          responsible_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          temporada_id: string
+        }
+        Update: {
+          academia_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          objective?: string | null
+          observaciones?: string | null
+          responsible_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          temporada_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ciclos_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: false
+            referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ciclos_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ciclos_temporada_id_fkey"
+            columns: ["temporada_id"]
+            isOneToOne: false
+            referencedRelation: "temporadas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      microciclos: {
+        Row: {
+          academia_id: string
+          ciclo_id: string
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          objective_main: string | null
+          objectives_secondary: string[]
+          observaciones: string | null
+          responsible_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["plan_status"]
+          type: Database["public"]["Enums"]["microciclo_type"]
+        }
+        Insert: {
+          academia_id: string
+          ciclo_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          objective_main?: string | null
+          objectives_secondary?: string[]
+          observaciones?: string | null
+          responsible_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          type?: Database["public"]["Enums"]["microciclo_type"]
+        }
+        Update: {
+          academia_id?: string
+          ciclo_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          objective_main?: string | null
+          objectives_secondary?: string[]
+          observaciones?: string | null
+          responsible_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          type?: Database["public"]["Enums"]["microciclo_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "microciclos_academia_id_fkey"
+            columns: ["academia_id"]
+            isOneToOne: false
+            referencedRelation: "academias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "microciclos_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "ciclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "microciclos_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1848,6 +2001,16 @@ export type Database = {
       dominant_foot: "Derecho" | "Izquierdo" | "Ambidiestro"
       evaluation_status: "Pendiente" | "Completada"
       match_status: "Confirmado" | "Por confirmar"
+      microciclo_type:
+        | "adaptacion"
+        | "carga"
+        | "desarrollo"
+        | "competicion"
+        | "recuperacion"
+        | "descarga"
+        | "transicion"
+        | "personalizado"
+      plan_status: "planificado" | "activo" | "finalizado" | "archivado"
       player_status: "Disponible" | "Suspendido" | "Lesionado"
       position_group:
         | "Arquero"
@@ -1997,6 +2160,17 @@ export const Constants = {
       dominant_foot: ["Derecho", "Izquierdo", "Ambidiestro"],
       evaluation_status: ["Pendiente", "Completada"],
       match_status: ["Confirmado", "Por confirmar"],
+      microciclo_type: [
+        "adaptacion",
+        "carga",
+        "desarrollo",
+        "competicion",
+        "recuperacion",
+        "descarga",
+        "transicion",
+        "personalizado",
+      ],
+      plan_status: ["planificado", "activo", "finalizado", "archivado"],
       player_status: ["Disponible", "Suspendido", "Lesionado"],
       position_group: ["Arquero", "Defensa", "Volante", "Extremo", "Delantero"],
       training_creation_mode: ["ia", "plantilla", "manual"],

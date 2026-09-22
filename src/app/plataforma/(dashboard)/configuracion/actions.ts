@@ -13,25 +13,48 @@ export interface ConfigActionState {
   success?: boolean;
 }
 
-/** Crea una nueva temporada para la academia activa. */
-export async function createTemporada(input: {
+/** Quién puede administrar la planificación deportiva (temporadas/ciclos): admin y coordinador. */
+async function requirePlanningStaff() {
+  const staff = await getCurrentStaffProfile();
+  if (!staff || !(staff.isAdmin || staff.role === "coordinador")) return null;
+  return staff;
+}
+
+export interface TemporadaInput {
   name: string;
   startDate: string;
   endDate: string;
-}): Promise<ConfigActionState> {
-  const staff = await getCurrentStaffProfile();
-  if (!staff?.isAdmin) return { error: "Solo un administrador puede crear temporadas." };
+  category?: string | null;
+  objective?: string | null;
+  responsibleId?: string | null;
+  status?: Enums<"plan_status">;
+}
+
+/** Crea una nueva temporada para la academia activa (admin o coordinador). */
+export async function createTemporada(input: TemporadaInput): Promise<ConfigActionState> {
+  const staff = await requirePlanningStaff();
+  if (!staff) return { error: "Solo un administrador o coordinador puede crear temporadas." };
 
   const academia = await getPrimaryAcademia();
   if (!academia) return { error: "No se encontró la academia activa." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("temporadas").insert({
+  const insertPayload: Record<string, unknown> = {
     academia_id: academia.id,
     name: input.name,
     start_date: input.startDate,
     end_date: input.endDate,
-  });
+    category: input.category ?? null,
+    objective: input.objective ?? null,
+    responsible_id: input.responsibleId ?? null,
+  };
+  // Solo tocamos status/is_active si vinieron explícitos — si no, dejamos que la
+  // base de datos aplique su valor por defecto, igual que antes de este cambio.
+  if (input.status !== undefined) {
+    insertPayload.status = input.status;
+    insertPayload.is_active = input.status === "activo";
+  }
+  const { error } = await supabase.from("temporadas").insert(insertPayload as never);
 
   if (error) {
     console.error("createTemporada() falló:", error);
@@ -39,6 +62,37 @@ export async function createTemporada(input: {
   }
 
   revalidatePath("/plataforma/configuracion");
+  revalidatePath("/plataforma/entrenamientos/planificacion");
+  return { success: true };
+}
+
+/** Edita una temporada existente (admin o coordinador). */
+export async function updateTemporada(id: string, input: Partial<TemporadaInput>): Promise<ConfigActionState> {
+  const staff = await requirePlanningStaff();
+  if (!staff) return { error: "Solo un administrador o coordinador puede editar temporadas." };
+
+  const supabase = await createClient();
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.startDate !== undefined) patch.start_date = input.startDate;
+  if (input.endDate !== undefined) patch.end_date = input.endDate;
+  if (input.category !== undefined) patch.category = input.category;
+  if (input.objective !== undefined) patch.objective = input.objective;
+  if (input.responsibleId !== undefined) patch.responsible_id = input.responsibleId;
+  if (input.status !== undefined) {
+    patch.status = input.status;
+    patch.is_active = input.status === "activo";
+  }
+
+  const { error } = await supabase.from("temporadas").update(patch as never).eq("id", id);
+
+  if (error) {
+    console.error("updateTemporada() falló:", error);
+    return { error: "No se pudo actualizar la temporada." };
+  }
+
+  revalidatePath("/plataforma/configuracion");
+  revalidatePath("/plataforma/entrenamientos/planificacion");
   return { success: true };
 }
 

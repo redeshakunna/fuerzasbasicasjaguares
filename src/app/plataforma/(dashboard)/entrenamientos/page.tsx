@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Dumbbell, Sparkles } from "lucide-react";
+import { Dumbbell, ListTree, Sparkles } from "lucide-react";
 import { TrainingCard } from "@/components/dashboard/entrenamientos/TrainingCard";
 import { getTrainings } from "@/lib/data/trainings";
 
@@ -27,13 +27,22 @@ export default async function EntrenamientosPage() {
             Programa sesiones y registra la evaluación de cada jugador — categoría Sub-15.
           </p>
         </div>
-        <Link
-          href="/plataforma/entrenamientos/nueva"
-          className="inline-flex items-center gap-2 rounded-xl bg-jaguar-green-600 px-4 py-2.5 text-[13.5px] lg:text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(13,18,16,0.08)] transition-colors hover:bg-jaguar-green-700"
-        >
-          <Sparkles className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-          Nueva sesión
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/plataforma/entrenamientos/planificacion"
+            className="inline-flex items-center gap-2 rounded-xl border border-jaguar-ink/10 px-4 py-2.5 text-[13.5px] lg:text-[15px] font-semibold text-jaguar-ink/70 transition-colors hover:bg-jaguar-ink/[0.03]"
+          >
+            <ListTree className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+            Planificación
+          </Link>
+          <Link
+            href="/plataforma/entrenamientos/nueva"
+            className="inline-flex items-center gap-2 rounded-xl bg-jaguar-green-600 px-4 py-2.5 text-[13.5px] lg:text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(13,18,16,0.08)] transition-colors hover:bg-jaguar-green-700"
+          >
+            <Sparkles className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+            Nueva sesión
+          </Link>
+        </div>
       </div>
 
       {trainings.length === 0 ? (

@@ -24,3 +24,13 @@ export async function getTemporadas(): Promise<TemporadaRow[]> {
   }
   return data ?? [];
 }
+
+export async function getTemporadaById(id: string): Promise<TemporadaRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("temporadas").select("*").eq("id", id).maybeSingle();
+  if (error) {
+    console.error("getTemporadaById() falló:", error);
+    return null;
+  }
+  return data ?? null;
+}
