@@ -75,6 +75,10 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
   }, [mobileOpen]);
 
   const isSolid = variant === "solid" || scrolled;
+  // Solo la home (variant="transparent") tiene un Hero oscuro debajo — mientras
+  // no se haya hecho scroll, el texto del navbar necesita ser claro para leerse
+  // sobre ese fondo. En el resto de páginas (variant="solid") nunca aplica.
+  const overDarkHero = variant === "transparent" && !scrolled;
 
   function openNow(label: string) {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -109,13 +113,25 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
             className="h-11 w-11 shrink-0 object-contain sm:h-14 sm:w-14 md:h-[72px] md:w-[72px] lg:h-28 lg:w-28"
           />
           <span className="hidden flex-col leading-none sm:flex">
-            <span className="text-[13px] font-extrabold uppercase tracking-[0.04em] text-jaguar-green-600 md:text-[15px] lg:text-[17px]">
+            <span
+              className={`text-[13px] font-extrabold uppercase tracking-[0.04em] md:text-[15px] lg:text-[17px] ${
+                overDarkHero ? "text-jaguar-white" : "text-jaguar-green-600"
+              }`}
+            >
               Fuerzas Básicas de Jaguares
             </span>
-            <span className="mt-0.5 text-[13px] font-extrabold uppercase tracking-[0.04em] text-jaguar-green-600 md:text-[15px] lg:text-[17px]">
+            <span
+              className={`mt-0.5 text-[13px] font-extrabold uppercase tracking-[0.04em] md:text-[15px] lg:text-[17px] ${
+                overDarkHero ? "text-jaguar-white" : "text-jaguar-green-600"
+              }`}
+            >
               de Córdoba FC
             </span>
-            <span className="mt-1 hidden text-[9px] font-medium uppercase tracking-[0.16em] text-jaguar-ink/45 md:block">
+            <span
+              className={`mt-1 hidden text-[9px] font-medium uppercase tracking-[0.16em] md:block ${
+                overDarkHero ? "text-jaguar-white/50" : "text-jaguar-ink/45"
+              }`}
+            >
               Formamos talento, construimos sueños
             </span>
           </span>
@@ -143,9 +159,13 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
                   } : undefined}
                   className={[
                     "relative flex items-center gap-1 pb-1 text-[12.5px] font-semibold uppercase tracking-[0.14em] transition-colors",
-                    isActive
-                      ? "text-jaguar-ink"
-                      : "text-jaguar-ink/65 hover:text-jaguar-green-600",
+                    overDarkHero
+                      ? isActive
+                        ? "text-jaguar-white"
+                        : "text-jaguar-white/75 hover:text-jaguar-turquoise-300"
+                      : isActive
+                        ? "text-jaguar-ink"
+                        : "text-jaguar-ink/65 hover:text-jaguar-green-600",
                   ].join(" ")}
                 >
                   {link.label}
@@ -159,7 +179,9 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
                   {isActive ? (
                     <motion.span
                       layoutId="navbar-active-indicator"
-                      className="absolute inset-x-0 -bottom-0.5 h-[2px] rounded-full bg-jaguar-green-500"
+                      className={`absolute inset-x-0 -bottom-0.5 h-[2px] rounded-full ${
+                        overDarkHero ? "bg-jaguar-turquoise-400" : "bg-jaguar-green-500"
+                      }`}
                     />
                   ) : null}
                 </Link>
@@ -209,7 +231,12 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/plataforma"
-            className="group inline-flex items-center gap-2 rounded-full border border-jaguar-ink/15 bg-jaguar-white/90 px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-jaguar-ink shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-jaguar-green-500/40 hover:bg-jaguar-white active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[11.5px] sm:tracking-[0.14em]"
+            className={[
+              "group inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] backdrop-blur-sm transition-all duration-300 active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[11.5px] sm:tracking-[0.14em]",
+              overDarkHero
+                ? "border border-jaguar-white/25 bg-jaguar-white/10 text-jaguar-white hover:border-jaguar-white/45 hover:bg-jaguar-white/20"
+                : "border border-jaguar-ink/15 bg-jaguar-white/90 text-jaguar-ink shadow-sm hover:border-jaguar-green-500/40 hover:bg-jaguar-white",
+            ].join(" ")}
           >
             <UserIcon />
             <span className="hidden sm:inline">Acceso Plataforma</span>
@@ -221,7 +248,12 @@ export function Navbar({ links, activeHref = "#inicio", variant = "transparent" 
             aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-jaguar-ink/15 bg-jaguar-white/90 text-jaguar-ink shadow-sm backdrop-blur-sm transition-colors hover:border-jaguar-green-500/40 lg:hidden"
+            className={[
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full backdrop-blur-sm transition-colors lg:hidden",
+              overDarkHero
+                ? "border border-jaguar-white/25 bg-jaguar-white/10 text-jaguar-white hover:border-jaguar-white/45"
+                : "border border-jaguar-ink/15 bg-jaguar-white/90 text-jaguar-ink shadow-sm hover:border-jaguar-green-500/40",
+            ].join(" ")}
           >
             {mobileOpen ? <X className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden /> : <Menu className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />}
           </button>

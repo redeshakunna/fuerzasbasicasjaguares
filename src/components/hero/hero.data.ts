@@ -9,9 +9,10 @@ export const heroSlides: HeroSlide[] = [
     id: "origen",
     accent: "green",
     image: {
-      src: "/hero/slide-01-origen.jpg",
+      src: "/hero/slide-00-formamos-hoy.jpg",
       alt: "Jugadores de las Fuerzas Básicas Jaguares de Córdoba en plena acción",
     },
+    eyebrow: "Formamos hoy",
     title: {
       lead: "Aquí nace",
       accent: "el futuro",

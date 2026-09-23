@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { ShieldCheck, Trophy, UserRound, Users } from "lucide-react";
 import type { HeroAccent, HeroSlide } from "./hero.types";
 
 interface HeroContentProps {
@@ -9,27 +10,30 @@ interface HeroContentProps {
 }
 
 const titleAccentClass: Record<HeroAccent, string> = {
-  green: "from-jaguar-turquoise-500 to-jaguar-green-500",
-  maroon: "from-jaguar-gold-500 to-jaguar-maroon-500",
-  turquoise: "from-jaguar-turquoise-400 to-jaguar-turquoise-500",
+  green: "from-jaguar-turquoise-400 to-jaguar-green-400",
+  maroon: "from-jaguar-gold-400 to-jaguar-maroon-400",
+  turquoise: "from-jaguar-turquoise-300 to-jaguar-turquoise-500",
 };
 
 const primaryCtaClass: Record<HeroAccent, string> = {
-  green: "bg-jaguar-green-600 shadow-[0_10px_30px_-10px_rgba(20,92,44,0.55)]",
+  green: "bg-gradient-to-r from-jaguar-green-500 to-jaguar-turquoise-500 shadow-[0_10px_30px_-8px_rgba(23,184,189,0.5)]",
   maroon: "bg-jaguar-maroon-500 shadow-[0_10px_30px_-10px_rgba(110,27,43,0.55)]",
   turquoise: "bg-jaguar-turquoise-500 shadow-[0_10px_30px_-10px_rgba(23,184,189,0.55)]",
 };
 
 /**
- * Panel izquierdo (~40%).
- *
- * Por requerimiento de diseño, esta entrega NO incluye copy: el espacio
- * debe permanecer limpio y "respirar". El componente ya está preparado
- * para recibir eyebrow/title/description/ctas por slide (ver
- * `hero.types.ts`) sin requerir cambios de layout — apenas se complete
- * `hero.data.ts`, el contenido aparecerá con la misma coreografía de
- * entrada que el resto del Hero.
+ * Franja de valores institucionales — estática (no cambia por slide), a
+ * imagen de las academias de referencia (Ajax/City/Bayern Campus): cuatro
+ * puntos cortos que refuerzan "formamos personas, no solo futbolistas"
+ * antes del CTA, sin agregar una sección nueva a la página.
  */
+const highlights = [
+  { icon: UserRound, label: "Más que fútbol" },
+  { icon: ShieldCheck, label: "Disciplina y valores" },
+  { icon: Users, label: "Talento regional" },
+  { icon: Trophy, label: "Un mejor futuro" },
+];
+
 function ArrowIcon() {
   return (
     <svg
@@ -77,13 +81,13 @@ export function HeroContent({ slide }: HeroContentProps) {
           className="w-full max-w-lg"
         >
           {slide.eyebrow ? (
-            <span className="mb-5 inline-block text-[13px] font-semibold uppercase tracking-[0.28em] text-jaguar-green-600">
+            <span className="mb-5 inline-block text-[13px] font-semibold uppercase tracking-[0.28em] text-jaguar-turquoise-300">
               {slide.eyebrow}
             </span>
           ) : null}
 
           {slide.title ? (
-            <h1 className="font-display text-6xl font-normal uppercase leading-[0.9] tracking-tight text-jaguar-ink lg:text-7xl xl:text-8xl">
+            <h1 className="font-display text-6xl font-normal uppercase leading-[0.9] tracking-tight text-jaguar-white [text-shadow:0_4px_24px_rgba(0,0,0,0.45)] lg:text-7xl xl:text-8xl">
               <span className="block">{slide.title.lead}</span>
               <span
                 className={`block bg-gradient-to-r bg-clip-text text-transparent ${titleAccentClass[slide.accent]}`}
@@ -94,25 +98,44 @@ export function HeroContent({ slide }: HeroContentProps) {
           ) : null}
 
           {slide.description ? (
-            <p className="mt-6 max-w-md text-base leading-relaxed text-jaguar-ink/70 lg:text-lg">
+            <p className="mt-6 max-w-md text-base leading-relaxed text-jaguar-white/75 lg:text-lg">
               {slide.description}
             </p>
           ) : null}
 
+          <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3">
+            {highlights.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className={`flex items-center gap-2 pl-5 first:pl-0 ${
+                    index > 0 ? "border-l border-jaguar-white/15" : ""
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-jaguar-turquoise-300" strokeWidth={1.9} aria-hidden />
+                  <span className="text-[11px] font-bold uppercase leading-tight tracking-[0.03em] text-jaguar-white/80">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
           {slide.ctas?.length ? (
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+            <div className="mt-9 flex flex-wrap items-center gap-4">
               {slide.ctas.map((cta) => (
                 <Link
                   key={cta.label}
                   href={cta.href}
                   className={
                     cta.variant === "secondary"
-                      ? "group inline-flex items-center gap-2.5 rounded-full border border-jaguar-ink/20 px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.14em] text-jaguar-ink transition-colors hover:bg-jaguar-ink/5"
+                      ? "group inline-flex items-center gap-2.5 rounded-full border border-jaguar-white/25 px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.14em] text-jaguar-white transition-colors hover:bg-jaguar-white/10"
                       : `group inline-flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.14em] text-jaguar-white transition-transform hover:scale-[1.03] ${primaryCtaClass[slide.accent]}`
                   }
                 >
                   {cta.icon === "play" ? (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-jaguar-ink/10">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-jaguar-white/15">
                       <PlayIcon />
                     </span>
                   ) : null}

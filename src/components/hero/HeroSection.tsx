@@ -60,7 +60,7 @@ export function HeroSection({ slides, autoPlayInterval = 7000 }: HeroSectionProp
     <section
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative h-[100svh] min-h-[720px] w-full overflow-hidden bg-jaguar-white lg:h-[960px] lg:max-h-[1000px]"
+      className="relative h-[100svh] min-h-[720px] w-full overflow-hidden bg-jaguar-green-900 lg:h-[960px] lg:max-h-[1000px]"
     >
       <Navbar links={navLinks} />
 
@@ -81,12 +81,30 @@ export function HeroSection({ slides, autoPlayInterval = 7000 }: HeroSectionProp
       />
       <ScrollCue />
 
+      {/* Pie editorial izquierdo — refuerza el claim de marca junto al indicador de scroll */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-8 left-6 z-30 hidden text-[10.5px] font-semibold uppercase tracking-[0.16em] text-jaguar-white/45 md:block md:left-12 lg:left-16"
+      >
+        Jaguares de Córdoba
+        <span className="mx-2 text-jaguar-white/25">·</span>
+        Más que un club, una oportunidad
+      </span>
+
       {/* Detalle editorial de marca — texto vertical sobre el borde izquierdo */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-4 top-1/2 hidden -translate-y-1/2 -rotate-180 text-[11px] font-semibold uppercase tracking-[0.4em] text-jaguar-ink/25 [writing-mode:vertical-rl] md:block"
+        className="pointer-events-none absolute left-4 top-1/2 hidden -translate-y-1/2 -rotate-180 text-[11px] font-semibold uppercase tracking-[0.4em] text-jaguar-white/25 [writing-mode:vertical-rl] md:block"
       >
         #SomosJaguares
+      </span>
+
+      {/* Tagline vertical sobre el borde derecho — hace pareja con #SomosJaguares del lado izquierdo */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-5 top-1/2 hidden -translate-y-1/2 text-[19px] italic font-medium text-jaguar-white/70 [writing-mode:vertical-rl] lg:block"
+      >
+        Talento que deja huella
       </span>
     </section>
   );

@@ -12,7 +12,7 @@ export function ScrollCue() {
   return (
     <div className="absolute inset-x-0 bottom-8 z-30 hidden justify-center md:flex">
       <div className="flex flex-col items-center gap-3">
-        <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-jaguar-ink/55">
+        <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-jaguar-white/70">
           <motion.span
             className="h-1 w-1 rounded-full bg-jaguar-turquoise-500"
             animate={{ opacity: [1, 0.25, 1] }}
@@ -23,7 +23,7 @@ export function ScrollCue() {
 
         <div className="relative h-12 w-12">
           {/* Anillo punteado, estático — marco tipo HUD */}
-          <div className="absolute inset-0 rounded-full border border-dashed border-jaguar-ink/20" />
+          <div className="absolute inset-0 rounded-full border border-dashed border-jaguar-white/25" />
 
           {/* Punto de acento orbitando alrededor del anillo */}
           <motion.div
@@ -41,7 +41,7 @@ export function ScrollCue() {
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             >
               <ChevronDown
-                className="h-4 w-4 text-jaguar-ink/70"
+                className="h-4 w-4 text-jaguar-white/85"
                 strokeWidth={2.25}
                 aria-hidden
               />
