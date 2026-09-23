@@ -341,3 +341,78 @@ export async function setPromotionReady(playerId: string, ready: boolean): Promi
   revalidatePath("/plataforma/jugadores");
   return { success: true };
 }
+
+export interface BulkActionState {
+  error?: string;
+  success?: boolean;
+  failedCount?: number;
+}
+
+/**
+ * Server Action — asigna un entrenador a varios jugadores a la vez (selección
+ * múltiple desde la tabla de "Gestión de Jugadores"). Reutiliza la misma
+ * validación de rol y la misma función RPC que `setAssignedCoach`, una vez
+ * por jugador — el plantel es chico (~30), así que no hace falta una RPC
+ * batch aparte. `coachId: null` desasigna (deja "Sin asignar").
+ */
+export async function bulkAssignCoach(playerIds: string[], coachId: string | null): Promise<BulkActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff || !(staff.role === "entrenador" || staff.role === "coordinador" || staff.isAdmin)) {
+    return { error: "Solo el técnico, el coordinador o el súper admin pueden asignar entrenador." };
+  }
+  if (playerIds.length === 0) return { error: "No hay jugadores seleccionados." };
+
+  const supabase = await createClient();
+  let failedCount = 0;
+  for (const playerId of playerIds) {
+    const { error } = await supabase.rpc("set_player_assigned_coach", {
+      p_player_id: playerId,
+      p_coach_id: coachId,
+    });
+    if (error) {
+      console.error(`bulkAssignCoach() falló para ${playerId}:`, error);
+      failedCount++;
+    }
+  }
+
+  revalidatePath("/plataforma/jugadores");
+  if (failedCount === playerIds.length) {
+    return { error: "No se pudo asignar el entrenador a ningún jugador seleccionado." };
+  }
+  return { success: true, failedCount: failedCount || undefined };
+}
+
+/**
+ * Server Action — elimina varios jugadores a la vez (selección múltiple desde
+ * la tabla). Solo súper admin, e irreversible. Si un jugador tiene historial
+ * vinculado (asistencia, evaluaciones, entrenamientos) y la base de datos
+ * rechaza el borrado por una llave foránea, esa fila específica se cuenta
+ * como fallida pero no interrumpe el resto de la selección.
+ */
+export async function bulkDeletePlayers(playerIds: string[]): Promise<BulkActionState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff?.isAdmin) {
+    return { error: "Solo el súper admin puede eliminar jugadores." };
+  }
+  if (playerIds.length === 0) return { error: "No hay jugadores seleccionados." };
+
+  const supabase = await createClient();
+  let failedCount = 0;
+  for (const playerId of playerIds) {
+    const { error } = await supabase.from("players").delete().eq("id", playerId);
+    if (error) {
+      console.error(`bulkDeletePlayers() falló para ${playerId}:`, error);
+      failedCount++;
+    }
+  }
+
+  revalidatePath("/plataforma/jugadores");
+  revalidatePath("/plataforma");
+  if (failedCount === playerIds.length) {
+    return {
+      error:
+        "No se pudo eliminar a ningún jugador seleccionado — probablemente tienen entrenamientos, evaluaciones o asistencia registrada vinculada. Avísale a soporte si necesitás eliminarlos junto con su historial.",
+    };
+  }
+  return { success: true, failedCount: failedCount || undefined };
+}

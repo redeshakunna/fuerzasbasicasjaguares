@@ -8,6 +8,7 @@ import { SquadAlerts } from "@/components/dashboard/jugadores/SquadAlerts";
 import { UpcomingBirthdays } from "@/components/dashboard/jugadores/UpcomingBirthdays";
 import { getPendingEvaluationsCount, getPlayers } from "@/lib/data/players";
 import { getCoachingStaff } from "@/lib/data/staff";
+import { getCurrentStaffProfile } from "@/lib/data/player-profile";
 import { getLastTrainingAttendanceMap } from "@/lib/data/attendance";
 import {
   getByAge,
@@ -37,10 +38,11 @@ export default async function JugadoresPage({ searchParams }: JugadoresPageProps
   const category = parseCategory(categoria);
   const isActiveCategory = activeCategories.includes(category);
 
-  const [playerRows, pendingEvaluations, coachingStaff] = await Promise.all([
+  const [playerRows, pendingEvaluations, coachingStaff, currentStaff] = await Promise.all([
     getPlayers(category),
     getPendingEvaluationsCount(),
     getCoachingStaff(),
+    getCurrentStaffProfile(),
   ]);
 
   const lastTrainingByPlayer = await getLastTrainingAttendanceMap(playerRows.map((p) => p.id));
@@ -52,6 +54,10 @@ export default async function JugadoresPage({ searchParams }: JugadoresPageProps
       row.assigned_coach_id ? coachNameById.get(row.assigned_coach_id) ?? null : null,
     ),
   );
+
+  const isAdmin = currentStaff?.isAdmin ?? false;
+  const canAssignCoach = isAdmin || currentStaff?.role === "entrenador" || currentStaff?.role === "coordinador";
+  const assignableCoaches = coachingStaff.filter((s) => s.role === "entrenador" || s.role === "coordinador");
 
   return (
     <div className="space-y-6">
@@ -68,7 +74,12 @@ export default async function JugadoresPage({ searchParams }: JugadoresPageProps
       <KpiGrid items={getPlayersKpis(playerRows)} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
-        <JugadoresContent players={players} />
+        <JugadoresContent
+          players={players}
+          assignableCoaches={assignableCoaches}
+          canAssignCoach={canAssignCoach}
+          isAdmin={isAdmin}
+        />
 
         <div className="space-y-6">
           <UpcomingBirthdays birthdays={getUpcomingBirthdays(playerRows)} />

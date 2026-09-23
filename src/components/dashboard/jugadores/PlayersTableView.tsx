@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Users } from "lucide-react";
 import type { RosterPlayer, RosterStatus } from "../data/jugadores-page.data";
@@ -12,8 +14,18 @@ const statusTone: Record<RosterStatus, "green" | "gold" | "maroon"> = {
   Lesionado: "maroon",
 };
 
-/** Vista de tabla del plantel real — alternativa compacta a las tarjetas. */
-export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
+/** Vista de tabla del plantel real — alternativa compacta a las tarjetas. Con selección múltiple para acciones en bloque. */
+export function PlayersTableView({
+  players,
+  selectedIds,
+  onToggle,
+  onToggleAll,
+}: {
+  players: RosterPlayer[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: (ids: string[]) => void;
+}) {
   if (players.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-jaguar-ink/12 bg-white py-16 text-center">
@@ -31,9 +43,25 @@ export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
   return (
     <Card className="overflow-hidden pb-2">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[920px] border-collapse text-left">
+        <table className="w-full min-w-[960px] border-collapse text-left">
           <thead>
             <tr className="border-y border-jaguar-ink/6 text-[11px] lg:text-[12px] font-bold uppercase tracking-[0.04em] text-jaguar-ink/40">
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={players.length > 0 && players.every((p) => selectedIds.has(p.id))}
+                  ref={(el) => {
+                    if (el) {
+                      const someSelected = players.some((p) => selectedIds.has(p.id));
+                      const allSelected = players.length > 0 && players.every((p) => selectedIds.has(p.id));
+                      el.indeterminate = someSelected && !allSelected;
+                    }
+                  }}
+                  onChange={() => onToggleAll(players.map((p) => p.id))}
+                  className="h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
+                  aria-label="Seleccionar todos"
+                />
+              </th>
               <th className="px-6 py-3 font-bold">Jugador</th>
               <th className="px-3 py-3 font-bold">Posición</th>
               <th className="px-3 py-3 font-bold">Estado</th>
@@ -46,7 +74,19 @@ export function PlayersTableView({ players }: { players: RosterPlayer[] }) {
           </thead>
           <tbody>
             {players.map((player) => (
-              <tr key={player.id} className="border-b border-jaguar-ink/6 last:border-none">
+              <tr
+                key={player.id}
+                className={`border-b border-jaguar-ink/6 last:border-none ${selectedIds.has(player.id) ? "bg-jaguar-green-50/60" : ""}`}
+              >
+                <td className="w-10 px-4 py-3.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(player.id)}
+                    onChange={() => onToggle(player.id)}
+                    className="h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
+                    aria-label={`Seleccionar a ${player.name}`}
+                  />
+                </td>
                 <td className="px-6 py-3.5">
                   <div className="flex items-center gap-3">
                     <Avatar initials={player.initials} photoUrl={player.photoUrl} size={34} />

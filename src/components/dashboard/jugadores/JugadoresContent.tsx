@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SearchX } from "lucide-react";
 import type { RosterPlayer } from "../data/jugadores-page.data";
+import type { StaffProfile } from "@/lib/data/staff";
 import { CoachSubmenu } from "./CoachSubmenu";
 import { defaultPlayersFilters, PlayersFilters, type PlayersFilterState, type PlayersView } from "./PlayersFilters";
+import { PlayersBulkActionsBar } from "./PlayersBulkActionsBar";
 import { PlayersGrid } from "./PlayersGrid";
 import { PlayersTableView } from "./PlayersTableView";
 
@@ -13,9 +15,20 @@ function norm(s: string) {
 }
 
 /** Filtros + selector de vista + listado del plantel (tarjetas o tabla) — filtrado real sobre datos del plantel. */
-export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
+export function JugadoresContent({
+  players,
+  assignableCoaches,
+  canAssignCoach,
+  isAdmin,
+}: {
+  players: RosterPlayer[];
+  assignableCoaches: StaffProfile[];
+  canAssignCoach: boolean;
+  isAdmin: boolean;
+}) {
   const [view, setView] = useState<PlayersView>("tarjetas");
   const [filters, setFilters] = useState<PlayersFilterState>(defaultPlayersFilters);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const categories = useMemo(() => Array.from(new Set(players.map((p) => p.category))).sort(), [players]);
   const positions = useMemo(() => Array.from(new Set(players.map((p) => p.position))).sort(), [players]);
@@ -45,9 +58,40 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
 
   const noResultsFromFilters = players.length > 0 && filteredPlayers.length === 0;
 
+  // Si cambian los filtros o la vista, la selección puede quedar apuntando a
+  // jugadores que ya no se ven en pantalla — mejor limpiarla que arrastrar
+  // una selección invisible.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filters, view]);
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(ids: string[]) {
+    setSelectedIds((prev) => {
+      const allSelected = ids.length > 0 && ids.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(ids);
+    });
+  }
+
   return (
     <div className="space-y-5">
       <CoachSubmenu coaches={coaches} active={filters.coach} onChange={(coach) => setFilters((f) => ({ ...f, coach }))} />
+
+      <PlayersBulkActionsBar
+        selectedIds={Array.from(selectedIds)}
+        coaches={assignableCoaches}
+        canAssignCoach={canAssignCoach}
+        canDelete={isAdmin}
+        onClear={() => setSelectedIds(new Set())}
+      />
 
       <PlayersFilters
         view={view}
@@ -81,7 +125,12 @@ export function JugadoresContent({ players }: { players: RosterPlayer[] }) {
       ) : view === "tarjetas" ? (
         <PlayersGrid players={filteredPlayers} />
       ) : (
-        <PlayersTableView players={filteredPlayers} />
+        <PlayersTableView
+          players={filteredPlayers}
+          selectedIds={selectedIds}
+          onToggle={toggleSelected}
+          onToggleAll={toggleSelectAll}
+        />
       )}
     </div>
   );
