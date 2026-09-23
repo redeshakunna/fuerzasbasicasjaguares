@@ -164,22 +164,21 @@ export async function createCargo(nombre: string): Promise<ConfigActionState & {
 export interface CreateStaffState {
   error?: string;
   success?: boolean;
-  grantedAccess?: boolean;
 }
 
 /**
  * Crea la ficha de un profesional nuevo (entrenador, psicólogo, nutricionista, etc.)
- * en el cuerpo técnico. Por defecto NO le da acceso a la plataforma: se crea una
- * cuenta de Supabase Auth "oculta" (sin correo, sin contraseña conocida, email sin
- * confirmar) solo para poder vincular su ficha — el profesional no puede iniciar
- * sesión con ella. Esto existe porque `profiles.id` siempre debe ser el id de una
- * cuenta real de auth.users; no hay forma de tener una ficha de staff totalmente
- * desligada de una cuenta.
+ * en el cuerpo técnico. Siempre se crea "en silencio": una cuenta de Supabase Auth
+ * sin correo de invitación enviado (email sin confirmar) solo para poder vincular
+ * su ficha — el profesional no puede iniciar sesión todavía. Esto existe porque
+ * `profiles.id` siempre debe ser el id de una cuenta real de auth.users; no hay
+ * forma de tener una ficha de staff totalmente desligada de una cuenta.
  *
- * Si se marca "Dar acceso a la plataforma ahora" (`grant_access`), en cambio se
- * envía la invitación real por correo (le llega un correo para poner su
- * contraseña, nunca la manejamos nosotros) — el mismo flujo de siempre, pero
- * ahora opcional. Solo administradores.
+ * La creación nunca envía correo ni depende de que el envío funcione — así nunca
+ * se cae por un problema de correo. El acceso a la plataforma (el correo con el
+ * link para poner contraseña) se envía después, a mano, con `sendStaffAccess()`
+ * desde la lista de profesionales, cuando el administrador lo decida. Solo
+ * administradores.
  */
 export async function createStaffMember(_prevState: CreateStaffState, formData: FormData): Promise<CreateStaffState> {
   const staff = await getCurrentStaffProfile();
@@ -188,7 +187,6 @@ export async function createStaffMember(_prevState: CreateStaffState, formData: 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "") as Enums<"user_role">;
-  const grantAccess = formData.get("grant_access") === "on" || formData.get("grant_access") === "true";
   let cargoId = String(formData.get("cargo_id") ?? "").trim() || null;
   const nuevoCargoNombre = String(formData.get("nuevo_cargo_nombre") ?? "").trim();
 
@@ -219,32 +217,17 @@ export async function createStaffMember(_prevState: CreateStaffState, formData: 
     return { error: "Falta configurar la llave de administrador de Supabase (SUPABASE_SERVICE_ROLE_KEY) en el servidor." };
   }
 
-  let userId: string;
-
-  if (grantAccess) {
-    const siteUrl = await getSiteUrl();
-    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${siteUrl}/plataforma/restablecer`,
-    });
-    if (inviteError || !invited?.user) {
-      console.error("createStaffMember() invite falló:", inviteError);
-      const alreadyExists = inviteError?.message?.toLowerCase().includes("already been registered");
-      return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo enviar la invitación." };
-    }
-    userId = invited.user.id;
-  } else {
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email,
-      email_confirm: false,
-      user_metadata: { full_name: fullName },
-    });
-    if (createError || !created?.user) {
-      console.error("createStaffMember() createUser falló:", createError);
-      const alreadyExists = createError?.message?.toLowerCase().includes("already registered");
-      return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo crear el profesional." };
-    }
-    userId = created.user.id;
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: false,
+    user_metadata: { full_name: fullName },
+  });
+  if (createError || !created?.user) {
+    console.error("createStaffMember() createUser falló:", createError);
+    const alreadyExists = createError?.message?.toLowerCase().includes("already registered");
+    return { error: alreadyExists ? "Ya existe una cuenta con ese correo." : "No se pudo crear el profesional." };
   }
+  const userId = created.user.id;
 
   const { error: profileError } = await admin
     .from("profiles")
@@ -252,15 +235,79 @@ export async function createStaffMember(_prevState: CreateStaffState, formData: 
 
   if (profileError) {
     console.error("createStaffMember() profiles falló:", profileError);
-    return {
-      error: grantAccess
-        ? "La invitación se envió, pero no se pudo guardar el perfil. Avísale a soporte."
-        : "Se creó la cuenta, pero no se pudo guardar el perfil. Avísale a soporte.",
-    };
+    return { error: "Se creó la cuenta, pero no se pudo guardar el perfil. Avísale a soporte." };
   }
 
   revalidatePath("/plataforma/configuracion");
-  return { success: true, grantedAccess: grantAccess };
+  return { success: true };
+}
+
+export interface SendAccessState {
+  error?: string;
+  success?: boolean;
+  message?: string;
+}
+
+/**
+ * Envía (o reenvía) el correo de acceso a la plataforma para un profesional ya
+ * creado — separado por completo de `createStaffMember()`, para que el admin
+ * decida cuándo mandarlo en vez de que se dispare solo al crear la ficha. Si la
+ * cuenta todavía no confirmó su correo, manda la invitación real
+ * (`inviteUserByEmail`, funciona también como reenvío mientras no la acepte). Si
+ * ya la confirmó antes (ya tiene contraseña puesta), en cambio manda un correo
+ * de restablecer contraseña — sirve igual para recuperar el acceso. Solo
+ * administradores.
+ */
+export async function sendStaffAccess(profileId: string): Promise<SendAccessState> {
+  const staff = await getCurrentStaffProfile();
+  if (!staff?.isAdmin) return { error: "Solo un administrador puede enviar el acceso." };
+
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    console.error("sendStaffAccess() sin service role key:", err);
+    return { error: "Falta configurar la llave de administrador de Supabase (SUPABASE_SERVICE_ROLE_KEY) en el servidor." };
+  }
+
+  const { data: userData, error: getUserError } = await admin.auth.admin.getUserById(profileId);
+  if (getUserError || !userData?.user?.email) {
+    console.error("sendStaffAccess() getUserById falló:", getUserError);
+    return { error: "No se encontró la cuenta de este profesional." };
+  }
+  const email = userData.user.email;
+  const alreadyConfirmed = Boolean(userData.user.email_confirmed_at);
+  const siteUrl = await getSiteUrl();
+
+  if (alreadyConfirmed) {
+    const supabase = await createClient();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/plataforma/restablecer`,
+    });
+    if (resetError) {
+      console.error("sendStaffAccess() resetPasswordForEmail falló:", resetError);
+      return { error: "No se pudo enviar el correo. Intenta de nuevo en unos minutos." };
+    }
+  } else {
+    const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${siteUrl}/plataforma/restablecer`,
+    });
+    if (inviteError) {
+      console.error("sendStaffAccess() inviteUserByEmail falló:", inviteError);
+      return { error: "No se pudo enviar el correo de acceso. Intenta de nuevo en unos minutos." };
+    }
+  }
+
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update({ invite_sent_at: new Date().toISOString() })
+    .eq("id", profileId);
+  if (updateError) {
+    console.error("sendStaffAccess() no se pudo guardar invite_sent_at:", updateError);
+  }
+
+  revalidatePath("/plataforma/configuracion");
+  return { success: true, message: `Correo de acceso enviado a ${email}.` };
 }
 
 export interface UpdateStaffState {

@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Building2, Calendar, LayoutGrid, Pencil, Plus, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Building2, Calendar, LayoutGrid, Mail, Pencil, Plus, ShieldCheck, Users } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { Avatar } from "../ui/Avatar";
-import { createStaffMember, createTemporada, updateReportCadence, updateStaffMember, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
+import { createStaffMember, createTemporada, sendStaffAccess, updateReportCadence, updateStaffMember, updateStaffRole } from "@/app/plataforma/(dashboard)/configuracion/actions";
 import { categories, activeCategories } from "@/lib/data/categories";
 import type { AcademiaRow, TemporadaRow } from "@/lib/data/academia";
 import type { StaffProfile } from "@/lib/data/staff";
@@ -42,6 +42,13 @@ function formatDate(iso: string) {
   return `${Number(d)} ${monthShort[Number(m) - 1]} ${y}`;
 }
 
+/** Fecha corta para un timestamp completo (ej. invite_sent_at) — no confundir con formatDate(), que espera "YYYY-MM-DD". */
+function formatDateTime(iso: string) {
+  const date = new Date(iso);
+  const monthShort = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${date.getDate()} ${monthShort[date.getMonth()]}`;
+}
+
 export function ConfiguracionTabs({
   academia,
   temporadas,
@@ -70,10 +77,13 @@ export function ConfiguracionTabs({
   const [inviteRole, setInviteRole] = useState<Enums<"user_role">>("entrenador");
   const [inviteCargoId, setInviteCargoId] = useState("");
   const [inviteNuevoCargoNombre, setInviteNuevoCargoNombre] = useState("");
-  const [inviteGrantAccess, setInviteGrantAccess] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [isInvitePending, startInviteTransition] = useTransition();
+
+  const [accessPendingId, setAccessPendingId] = useState<string | null>(null);
+  const [accessMessage, setAccessMessage] = useState<{ id: string; text: string; isError: boolean } | null>(null);
+  const [, startAccessTransition] = useTransition();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFullName, setEditFullName] = useState("");
@@ -115,7 +125,6 @@ export function ConfiguracionTabs({
       formData.set("full_name", inviteFullName.trim());
       formData.set("email", inviteEmail.trim());
       formData.set("role", inviteRole);
-      formData.set("grant_access", inviteGrantAccess ? "on" : "off");
       if (inviteCargoId === NUEVO_CARGO) {
         formData.set("nuevo_cargo_nombre", inviteNuevoCargoNombre.trim());
       } else if (inviteCargoId) {
@@ -126,17 +135,27 @@ export function ConfiguracionTabs({
         setInviteError(result.error);
         return;
       }
-      setInviteSuccess(
-        result.grantedAccess
-          ? `Invitación enviada a ${inviteEmail.trim()}.`
-          : `${inviteFullName.trim()} se agregó al cuerpo técnico, sin acceso a la plataforma.`,
-      );
+      setInviteSuccess(`${inviteFullName.trim()} se agregó al cuerpo técnico. Podés enviarle el acceso a la plataforma cuando quieras desde la lista.`);
       setInviteFullName("");
       setInviteEmail("");
       setInviteRole("entrenador");
       setInviteCargoId("");
       setInviteNuevoCargoNombre("");
-      setInviteGrantAccess(false);
+      router.refresh();
+    });
+  }
+
+  function submitSendAccess(profileId: string) {
+    setAccessMessage(null);
+    setAccessPendingId(profileId);
+    startAccessTransition(async () => {
+      const result = await sendStaffAccess(profileId);
+      setAccessPendingId(null);
+      if (result.error) {
+        setAccessMessage({ id: profileId, text: result.error, isError: true });
+        return;
+      }
+      setAccessMessage({ id: profileId, text: result.message ?? "Correo enviado.", isError: false });
       router.refresh();
     });
   }
@@ -484,24 +503,10 @@ export function ConfiguracionTabs({
                     </label>
                   ) : null}
                 </div>
-                <label className="mt-3 flex items-start gap-2.5 rounded-xl border border-jaguar-ink/8 bg-white px-3.5 py-3">
-                  <input
-                    type="checkbox"
-                    checked={inviteGrantAccess}
-                    onChange={(e) => setInviteGrantAccess(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-jaguar-ink/20 text-jaguar-green-600 focus:ring-jaguar-green-500/30"
-                  />
-                  <span>
-                    <span className="block text-[12.5px] lg:text-[13.5px] font-semibold text-jaguar-ink">
-                      Dar acceso a la plataforma ahora
-                    </span>
-                    <span className="mt-0.5 block text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
-                      {inviteGrantAccess
-                        ? "Le llega un correo para crear su propia contraseña — nunca la escribimos nosotros."
-                        : "Sin marcar, solo queda en el cuerpo técnico con su cargo, sin poder iniciar sesión. Ideal para profesionales que no van a entrar a la plataforma."}
-                    </span>
-                  </span>
-                </label>
+                <p className="mt-3 rounded-xl border border-jaguar-ink/8 bg-white px-3.5 py-3 text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
+                  Se crea la ficha en el cuerpo técnico, sin acceso a la plataforma todavía. Desde la lista vas a poder
+                  enviarle el correo de acceso cuando quieras — o nunca, si es un profesional que no necesita entrar.
+                </p>
                 {inviteError ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-maroon-600">{inviteError}</p> : null}
                 {inviteSuccess ? <p className="mt-2 text-[11.5px] lg:text-[12.5px] font-medium text-jaguar-green-600">{inviteSuccess}</p> : null}
                 <div className="mt-3 flex justify-end gap-2">
@@ -612,24 +617,50 @@ export function ConfiguracionTabs({
                       );
                     }
 
+                    const isSendingAccess = accessPendingId === s.id;
+                    const rowMessage = accessMessage?.id === s.id ? accessMessage : null;
+
                     return (
-                      <div key={s.id} className="flex items-center gap-3 rounded-xl border border-jaguar-ink/8 px-4 py-3">
-                        <Avatar initials={s.full_name.slice(0, 2).toUpperCase()} size={36} photoUrl={s.avatar_url} />
-                        <div className="flex-1">
-                          <p className="text-[13px] lg:text-[14px] font-semibold text-jaguar-ink">{s.full_name}</p>
-                          <p className="text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
-                            {cargoNombre ? `${cargoNombre} · ${roleLabel[s.role]}` : roleLabel[s.role]}
-                          </p>
+                      <div key={s.id} className="rounded-xl border border-jaguar-ink/8 px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar initials={s.full_name.slice(0, 2).toUpperCase()} size={36} photoUrl={s.avatar_url} />
+                          <div className="flex-1">
+                            <p className="text-[13px] lg:text-[14px] font-semibold text-jaguar-ink">{s.full_name}</p>
+                            <p className="text-[11.5px] lg:text-[12.5px] text-jaguar-ink/45">
+                              {cargoNombre ? `${cargoNombre} · ${roleLabel[s.role]}` : roleLabel[s.role]}
+                              {s.invite_sent_at ? ` · Acceso enviado el ${formatDateTime(s.invite_sent_at)}` : ""}
+                            </p>
+                          </div>
+                          {isAdmin ? (
+                            <button
+                              type="button"
+                              onClick={() => submitSendAccess(s.id)}
+                              disabled={isSendingAccess}
+                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/50 hover:bg-jaguar-ink/[0.05] hover:text-jaguar-ink disabled:opacity-50"
+                            >
+                              <Mail className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                              {isSendingAccess ? "Enviando…" : s.invite_sent_at ? "Reenviar correo" : "Enviar acceso"}
+                            </button>
+                          ) : null}
+                          {isAdmin ? (
+                            <button
+                              type="button"
+                              onClick={() => startEditingStaff(s)}
+                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/50 hover:bg-jaguar-ink/[0.05] hover:text-jaguar-ink"
+                            >
+                              <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                              Editar
+                            </button>
+                          ) : null}
                         </div>
-                        {isAdmin ? (
-                          <button
-                            type="button"
-                            onClick={() => startEditingStaff(s)}
-                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] lg:text-[13px] font-semibold text-jaguar-ink/50 hover:bg-jaguar-ink/[0.05] hover:text-jaguar-ink"
+                        {rowMessage ? (
+                          <p
+                            className={`mt-2 text-[11.5px] lg:text-[12.5px] font-medium ${
+                              rowMessage.isError ? "text-jaguar-maroon-600" : "text-jaguar-green-600"
+                            }`}
                           >
-                            <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                            Editar
-                          </button>
+                            {rowMessage.text}
+                          </p>
                         ) : null}
                       </div>
                     );

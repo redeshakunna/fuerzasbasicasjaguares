@@ -1525,6 +1525,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          invite_sent_at: string | null
           onboarded_at: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
@@ -1536,6 +1537,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id: string
+          invite_sent_at?: string | null
           onboarded_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
@@ -1547,6 +1549,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          invite_sent_at?: string | null
           onboarded_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
